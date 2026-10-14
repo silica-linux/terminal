@@ -23,6 +23,10 @@ void main(List<String> args) {
   WidgetsFlutterBinding.ensureInitialized();
   // The title band is part of the window: Ossido draws only the window buttons in it.
   SilicaWindow.setFullSizeContent(titleBarHeight).ignore();
+  // 80 × 24 cells open a 597 × 421 pt window (terminal.md › Default size); the minimum keeps
+  // 20 × 4 cells. Resizing does not snap to whole cells yet (docs/parity.md).
+  SilicaWindow.setSizeLimits(min: minimumWindowSize).ignore();
+  SilicaWindow.setSize(defaultWindowSize).ignore();
   runApp(
     AppLocalizationsScope(
       child: Directionality(

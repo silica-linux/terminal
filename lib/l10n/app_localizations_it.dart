@@ -51,4 +51,13 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get findNoMatches => 'Nessun risultato';
+
+  @override
+  String get findPrevious => 'Risultato precedente';
+
+  @override
+  String get findNext => 'Risultato successivo';
+
+  @override
+  String get findDone => 'Fine';
 }

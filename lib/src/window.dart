@@ -1,5 +1,6 @@
-// The Terminal window: the title band (the window buttons of Ossido sit in it, the empty band
-// moves the window), the tab bar from two tabs, the find bar, and the character grid.
+// The Terminal window (TE-01, terminal.md): the 32 pt title band (the window buttons of Ossido
+// sit in it, the empty band moves the window), the 28 pt tab bar always visible, the 32 pt find
+// bar that grows the window, and the character grid with its scroller column.
 //
 // Commands (docs/spec.md): terminal.new_tab ⌘T, terminal.close_tab ⌘W, terminal.next_tab ⌃⇥,
 // terminal.previous_tab ⌃⇧⇥, terminal.find ⌘F, terminal.copy ⌘C, terminal.paste ⌘V,
@@ -83,9 +84,22 @@ class TerminalWindow extends StatefulWidget {
   State<TerminalWindow> createState() => TerminalWindowState();
 }
 
-class TerminalWindowState extends State<TerminalWindow> {
+/// A tab in the bar: its session and how far in it is (0 → 1 entering, 1 → 0 closing).
+class _TabSlot {
+  _TabSlot(this.session, this.presence);
+  final TerminalSession session;
+  final AnimationController presence;
+  bool closing = false;
+}
+
+class TerminalWindowState extends State<TerminalWindow>
+    with TickerProviderStateMixin {
   final List<TerminalSession> _tabs = [];
   int _current = 0;
+
+  /// The tabs drawn in the bar, closing ones included until they have shrunk away.
+  final List<_TabSlot> _slots = [];
+  final ScrollController _scroll = ScrollController();
 
   bool _finding = false;
   final TextEditingController _query = TextEditingController();
@@ -99,7 +113,14 @@ class TerminalWindowState extends State<TerminalWindow> {
   late final AppLifecycleListener _lifecycle = AppLifecycleListener(
     onStateChange: (state) {
       final active = _isActive(state);
-      if (active != _windowActive) setState(() => _windowActive = active);
+      if (active == _windowActive) return;
+      setState(() => _windowActive = active);
+      // An inactive window shows a hollow cursor (the grid without focus) and a grey selection.
+      if (!active) {
+        _gridFocus.unfocus();
+      } else if (!_finding) {
+        _gridFocus.requestFocus();
+      }
     },
   );
 
@@ -125,6 +146,10 @@ class TerminalWindowState extends State<TerminalWindow> {
     for (final tab in _tabs) {
       tab.dispose();
     }
+    for (final slot in _slots) {
+      slot.presence.dispose();
+    }
+    _scroll.dispose();
     _query.dispose();
     _queryFocus.dispose();
     _gridFocus.dispose();
@@ -139,11 +164,30 @@ class TerminalWindowState extends State<TerminalWindow> {
       cwd: widget.cwd,
       shellName: widget.shellName,
     )..addListener(_changed);
+    // The new tab slides in from the right and settles in ~550 ms.
+    final presence = AnimationController(
+      vsync: this,
+      duration: tabEnter,
+      reverseDuration: tabExit,
+    );
     setState(() {
       final at = _tabs.isEmpty ? 0 : _current + 1;
+      final after = _tabs.isEmpty ? null : _tabs[_current];
       _tabs.insert(at, session);
       _current = at;
+      final slotAt = after == null
+          ? _slots.length
+          : _slots.indexWhere((s) => s.session == after) + 1;
+      _slots.insert(
+        slotAt.clamp(0, _slots.length),
+        _TabSlot(session, presence),
+      );
     });
+    if (_slots.length == 1) {
+      presence.value = 1;
+    } else {
+      presence.forward();
+    }
     // Starts once the grid has its size (the view resizes the emulator on layout).
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) session.start();
@@ -157,6 +201,15 @@ class TerminalWindowState extends State<TerminalWindow> {
     if (i < 0 || i >= _tabs.length) return;
     final session = _tabs.removeAt(i)..removeListener(_changed);
     session.dispose();
+    // The closed tab shrinks away in ~500 ms while the others grow.
+    for (final slot in _slots.where((s) => s.session == session).toList()) {
+      slot.closing = true;
+      slot.presence.reverse().whenCompleteOrCancel(() {
+        if (!mounted) return;
+        setState(() => _slots.remove(slot));
+        slot.presence.dispose();
+      });
+    }
     if (_tabs.isEmpty) {
       widget.onLastTabClosed?.call();
       setState(() {});
@@ -199,7 +252,16 @@ class TerminalWindowState extends State<TerminalWindow> {
     return l10n.windowTitle(session.title, t.viewWidth, t.viewHeight);
   }
 
+  /// The find bar adds 32 pt to the window, the grid keeps its size (terminal.md › Find bar).
+  void _growForFind(bool grow) {
+    final size = MediaQuery.maybeSizeOf(context);
+    if (size == null) return;
+    final by = grow ? findBarHeight : -findBarHeight;
+    SilicaWindow.setSize(Size(size.width, size.height + by)).ignore();
+  }
+
   void _startFind() {
+    if (!_finding) _growForFind(true);
     setState(() => _finding = true);
     _queryFocus.requestFocus();
     _runFind();
@@ -209,6 +271,7 @@ class TerminalWindowState extends State<TerminalWindow> {
     _highlights?.clear();
     _highlights = null;
     if (!_finding) return;
+    _growForFind(false);
     setState(() {
       _finding = false;
       _matches = const [];
@@ -228,14 +291,14 @@ class TerminalWindowState extends State<TerminalWindow> {
     });
     _highlights?.clear();
     _highlights = SearchHighlights(s.terminal, s.controller)
-      ..show(matches, _match, profileOf(context).theme);
+      ..show(matches, _match, profileOf(context).theme(active: _windowActive));
   }
 
   @override
   Widget build(BuildContext context) {
     final profile = profileOf(context);
     if (_tabs.isEmpty) {
-      return ColoredBox(color: profile.theme.background);
+      return ColoredBox(color: profile.grid.background);
     }
     final s = session;
     return Actions(
@@ -252,24 +315,45 @@ class TerminalWindowState extends State<TerminalWindow> {
       child: Shortcuts(
         shortcuts: windowShortcuts,
         child: ColoredBox(
-          color: profile.theme.background,
+          color: profile.grid.background,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               _titleBand(profile),
-              if (_tabs.length > 1) _tabBar(profile),
+              _tabBar(profile),
+              // Down to y 68, where the content starts under a 1 pt line.
+              Container(
+                height: chromeHeight - titleBarHeight - tabBarHeight,
+                decoration: BoxDecoration(
+                  color: profile.chrome,
+                  border: Border(bottom: BorderSide(color: profile.separator)),
+                ),
+              ),
               if (_finding) _findBar(profile),
               Expanded(
-                child: Padding(
-                  padding: gridPadding,
+                // The scroller column (19 pt, knob 11) sits in the right inset of the grid.
+                child: RawScrollbar(
+                  key: const ValueKey('scroller'),
+                  controller: _scroll,
+                  thumbVisibility: true,
+                  trackVisibility: profile.scrollerTrack != null,
+                  thickness: scrollerKnobWidth,
+                  radius: const Radius.circular(scrollerKnobWidth / 2),
+                  thumbColor: profile.scrollerKnob,
+                  trackColor: profile.scrollerTrack,
+                  trackBorderColor: const Color(0x00000000),
+                  crossAxisMargin: (scrollerWidth - scrollerKnobWidth) / 2,
                   child: TerminalView(
                     s.terminal,
                     key: ObjectKey(s),
                     controller: s.controller,
-                    theme: profile.theme,
+                    scrollController: _scroll,
+                    padding: gridPadding,
+                    theme: profile.theme(active: _windowActive),
                     textStyle: terminalStyle,
                     focusNode: _gridFocus,
                     autofocus: true,
+                    cursorType: TerminalCursorType.block,
                     shortcuts: {...gridShortcuts, ...windowShortcuts},
                     hardwareKeyboardOnly: true,
                     keyboardAppearance:
@@ -290,8 +374,10 @@ class TerminalWindowState extends State<TerminalWindow> {
       key: const ValueKey('title band'),
       height: titleBarHeight,
       color: profile.chrome,
-      alignment: Alignment.center,
-      padding: const EdgeInsets.symmetric(horizontal: 84),
+      // The title starts after the window buttons and the proxy icon (AX x +100, y +8); bold
+      // ~13 pt, `#595959` / `#a1a1a1`.
+      padding: const EdgeInsets.only(left: 100, right: 16, top: 8),
+      alignment: Alignment.topLeft,
       child: Text(
         _title,
         key: const ValueKey('title'),
@@ -300,97 +386,265 @@ class TerminalWindowState extends State<TerminalWindow> {
         style: uiText(
           size: 13,
           color: _windowActive ? profile.title : profile.titleInactive,
-        ).copyWith(fontWeight: FontWeight.w600),
+        ).copyWith(fontWeight: FontWeight.w600, height: 16 / 13),
       ),
     ),
   );
 
+  /// The tab label: the path in grey, the process in bold ("~/src — vim").
+  Widget _tabLabel(TerminalSession session, Profile profile, bool selected) {
+    final title = session.title;
+    final dash = title.lastIndexOf(' — ');
+    final color = selected ? profile.tabText : profile.tabTextInactive;
+    final base = uiText(size: 12, color: color);
+    return Text.rich(
+      dash < 0
+          ? TextSpan(
+              text: title,
+              style: base.copyWith(fontWeight: FontWeight.w600),
+            )
+          : TextSpan(
+              children: [
+                TextSpan(
+                  text: title.substring(0, dash + 3),
+                  style: base.copyWith(color: profile.tabTextInactive),
+                ),
+                TextSpan(
+                  text: title.substring(dash + 3),
+                  style: base.copyWith(fontWeight: FontWeight.w600),
+                ),
+              ],
+            ),
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+      textAlign: TextAlign.center,
+    );
+  }
+
+  /// The tab bar: always visible, 28 pt; capsule tabs 24 pt from x +10 sharing the width, the
+  /// 30 pt "+" circle 7 pt from the right edge.
   Widget _tabBar(Profile profile) => Container(
     key: const ValueKey('tab bar'),
     height: tabBarHeight,
-    color: profile.tab,
-    child: Row(
+    color: profile.chrome,
+    child: Stack(
+      clipBehavior: Clip.none,
       children: [
-        for (var i = 0; i < _tabs.length; i++)
-          Expanded(
-            child: GestureDetector(
-              key: ValueKey('tab $i'),
-              behavior: HitTestBehavior.opaque,
-              onTap: () => selectTab(i),
-              child: Container(
-                color: i == _current ? profile.tabActive : null,
-                alignment: Alignment.center,
-                padding: const EdgeInsets.symmetric(horizontal: 24),
-                child: Text(
-                  _tabs[i].title,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: uiText(size: 11, color: profile.tabText),
+        Positioned(
+          left: tabBarLeft,
+          right: newTabRight + newTabSide + 5,
+          top: tabTop,
+          height: tabHeight,
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              color: profile.tabTrack,
+              borderRadius: BorderRadius.circular(tabHeight / 2),
+            ),
+            child: AnimatedBuilder(
+              animation: Listenable.merge([for (final s in _slots) s.presence]),
+              builder: (context, _) => LayoutBuilder(
+                builder: (context, box) => _tabRow(profile, box.maxWidth),
+              ),
+            ),
+          ),
+        ),
+        Positioned(
+          right: newTabRight,
+          top: newTabTop,
+          width: newTabSide,
+          height: newTabSide,
+          child: GestureDetector(
+            key: const ValueKey('new tab'),
+            behavior: HitTestBehavior.opaque,
+            onTap: newTab,
+            child: Semantics(
+              label: l10n.newTab,
+              button: true,
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: profile.tabTrack,
+                  shape: BoxShape.circle,
+                ),
+                child: Center(
+                  child: Text(
+                    '+',
+                    style: uiText(size: 18, color: profile.tabText),
+                  ),
                 ),
               ),
             ),
           ),
+        ),
       ],
     ),
   );
 
+  Widget _tabRow(Profile profile, double width) {
+    const curve = Curves.easeOutCubic;
+    final weights = [
+      for (final slot in _slots) curve.transform(slot.presence.value),
+    ];
+    final total = weights.fold<double>(0, (a, b) => a + b);
+    if (total <= 0) return const SizedBox.shrink();
+    return Row(
+      children: [
+        for (var i = 0; i < _slots.length; i++)
+          SizedBox(
+            width: width * weights[i] / total,
+            child: _tab(profile, _slots[i]),
+          ),
+      ],
+    );
+  }
+
+  Widget _tab(Profile profile, _TabSlot slot) {
+    final index = _tabs.indexOf(slot.session);
+    final selected = index == _current && !slot.closing;
+    return GestureDetector(
+      key: index < 0 ? null : ValueKey('tab $index'),
+      behavior: HitTestBehavior.opaque,
+      onTap: index < 0 ? null : () => selectTab(index),
+      child: ClipRect(
+        child: Container(
+          margin: const EdgeInsets.all(1),
+          decoration: selected
+              ? BoxDecoration(
+                  color: profile.tabActive,
+                  borderRadius: BorderRadius.circular((tabHeight - 2) / 2),
+                )
+              : null,
+          alignment: Alignment.center,
+          padding: const EdgeInsets.symmetric(horizontal: 24),
+          child: _tabLabel(slot.session, profile, selected),
+        ),
+      ),
+    );
+  }
+
+  /// The find bar (32 pt): the field 482 × 22 at x +7 with a focus ring, the previous/next
+  /// pair 45 × 22, the "Done" button 44 × 22, and the match count.
   Widget _findBar(Profile profile) {
     final status = _query.text.isEmpty
         ? ''
         : _matches.isEmpty
         ? l10n.findNoMatches
         : l10n.findMatches(_match + 1, _matches.length);
+    Widget button(
+      String key,
+      String label,
+      Widget child,
+      VoidCallback onTap,
+      double width,
+    ) => GestureDetector(
+      key: ValueKey(key),
+      behavior: HitTestBehavior.opaque,
+      onTap: onTap,
+      child: Semantics(
+        label: label,
+        button: true,
+        child: Container(
+          width: width,
+          height: findFieldSize.height,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: profile.tabTrack,
+            borderRadius: BorderRadius.circular(6),
+          ),
+          child: child,
+        ),
+      ),
+    );
+    final glyph = uiText(size: 12, color: profile.title);
     return Container(
       key: const ValueKey('find bar'),
-      height: 30,
+      height: findBarHeight,
       color: profile.chrome,
-      padding: const EdgeInsets.symmetric(horizontal: 10),
+      padding: const EdgeInsets.only(left: findFieldLeft, right: 10),
       child: Row(
         children: [
-          Expanded(
-            child: Focus(
-              onKeyEvent: (node, event) {
-                if (event is! KeyDownEvent) return KeyEventResult.ignored;
-                if (event.logicalKey == LogicalKeyboardKey.escape) {
-                  _endFind();
-                  return KeyEventResult.handled;
-                }
-                if (event.logicalKey == LogicalKeyboardKey.enter) {
-                  _runFind(
-                    step: HardwareKeyboard.instance.isShiftPressed ? -1 : 1,
-                  );
-                  return KeyEventResult.handled;
-                }
-                return KeyEventResult.ignored;
-              },
-              child: Stack(
-                alignment: Alignment.centerLeft,
-                children: [
-                  if (_query.text.isEmpty)
-                    IgnorePointer(
-                      child: Text(
-                        l10n.find,
-                        style: uiText(size: 12, color: profile.titleInactive),
+          Flexible(
+            child: Container(
+              width: findFieldSize.width,
+              height: findFieldSize.height,
+              padding: const EdgeInsets.symmetric(horizontal: 6),
+              decoration: BoxDecoration(
+                color: profile.grid.background,
+                borderRadius: BorderRadius.circular(6),
+                border: Border.all(color: profile.findRing, width: 2),
+              ),
+              alignment: Alignment.centerLeft,
+              child: Focus(
+                onKeyEvent: (node, event) {
+                  if (event is! KeyDownEvent) return KeyEventResult.ignored;
+                  if (event.logicalKey == LogicalKeyboardKey.escape) {
+                    _endFind();
+                    return KeyEventResult.handled;
+                  }
+                  if (event.logicalKey == LogicalKeyboardKey.enter) {
+                    _runFind(
+                      step: HardwareKeyboard.instance.isShiftPressed ? -1 : 1,
+                    );
+                    return KeyEventResult.handled;
+                  }
+                  return KeyEventResult.ignored;
+                },
+                child: Stack(
+                  alignment: Alignment.centerLeft,
+                  children: [
+                    if (_query.text.isEmpty)
+                      IgnorePointer(
+                        child: Text(
+                          l10n.find,
+                          style: uiText(size: 12, color: profile.titleInactive),
+                        ),
                       ),
+                    EditableText(
+                      key: const ValueKey('find field'),
+                      controller: _query,
+                      focusNode: _queryFocus,
+                      style: uiText(size: 12, color: profile.grid.foreground),
+                      cursorColor: profile.grid.foreground,
+                      backgroundCursorColor: profile.grid.foreground,
+                      maxLines: 1,
+                      onChanged: (_) => _runFind(),
                     ),
-                  EditableText(
-                    key: const ValueKey('find field'),
-                    controller: _query,
-                    focusNode: _queryFocus,
-                    style: uiText(size: 12, color: profile.title),
-                    cursorColor: profile.title,
-                    backgroundCursorColor: profile.title,
-                    maxLines: 1,
-                    onChanged: (_) => _runFind(),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),
-          Text(
-            status,
-            key: const ValueKey('find status'),
-            style: uiText(size: 11, color: profile.titleInactive),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              status,
+              key: const ValueKey('find status'),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: uiText(size: 11, color: profile.titleInactive),
+            ),
+          ),
+          button(
+            'find previous',
+            l10n.findPrevious,
+            Text('‹', style: glyph),
+            () => _runFind(step: -1),
+            22,
+          ),
+          const SizedBox(width: 1),
+          button(
+            'find next',
+            l10n.findNext,
+            Text('›', style: glyph),
+            () => _runFind(step: 1),
+            22,
+          ),
+          const SizedBox(width: 8),
+          button(
+            'find done',
+            l10n.findDone,
+            Text(l10n.findDone, style: uiText(size: 11, color: profile.title)),
+            _endFind,
+            44,
           ),
         ],
       ),

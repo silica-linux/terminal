@@ -51,4 +51,13 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get findNoMatches => 'No matches';
+
+  @override
+  String get findPrevious => 'Previous match';
+
+  @override
+  String get findNext => 'Next match';
+
+  @override
+  String get findDone => 'Done';
 }

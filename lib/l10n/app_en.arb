@@ -24,5 +24,11 @@
   "findMatches": "{current} of {count}",
   "@findMatches": {"description": "Position of the current match among all matches of the find field.", "placeholders": {"current": {"type": "int"}, "count": {"type": "int"}}},
   "findNoMatches": "No matches",
-  "@findNoMatches": {"description": "The find field found nothing."}
+  "@findNoMatches": {"description": "The find field found nothing."},
+  "findPrevious": "Previous match",
+  "@findPrevious": {"description": "Button of the find bar that selects the previous match."},
+  "findNext": "Next match",
+  "@findNext": {"description": "Button of the find bar that selects the next match."},
+  "findDone": "Done",
+  "@findDone": {"description": "Button that closes the find bar."}
 }

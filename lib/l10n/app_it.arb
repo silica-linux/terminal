@@ -10,5 +10,8 @@
   "processKilled": "Il processo è stato chiuso dal segnale {signal}.",
   "find": "Cerca",
   "findMatches": "{current} di {count}",
-  "findNoMatches": "Nessun risultato"
+  "findNoMatches": "Nessun risultato",
+  "findPrevious": "Risultato precedente",
+  "findNext": "Risultato successivo",
+  "findDone": "Fine"
 }

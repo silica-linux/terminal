@@ -163,6 +163,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'No matches'**
   String get findNoMatches;
+
+  /// Button of the find bar that selects the previous match.
+  ///
+  /// In en, this message translates to:
+  /// **'Previous match'**
+  String get findPrevious;
+
+  /// Button of the find bar that selects the next match.
+  ///
+  /// In en, this message translates to:
+  /// **'Next match'**
+  String get findNext;
+
+  /// Button that closes the find bar.
+  ///
+  /// In en, this message translates to:
+  /// **'Done'**
+  String get findDone;
 }
 
 class _AppLocalizationsDelegate
