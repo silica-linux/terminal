@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:silica_ui/silica_ui.dart';
 
+import 'src/grid.dart';
 import 'src/l10n.dart';
 import 'src/pty.dart';
 import 'src/style.dart';
@@ -26,7 +27,52 @@ void main(List<String> args) {
   // 80 × 24 cells open a 597 × 421 pt window (terminal.md › Default size); the minimum keeps
   // 20 × 4 cells. Resizing does not snap to whole cells yet (docs/parity.md).
   SilicaWindow.setSizeLimits(min: minimumWindowSize).ignore();
-  SilicaWindow.setSize(defaultWindowSize).ignore();
+  // SILICA_TERMINAL_SIZE=WxH (benchmarks: the same grid in every terminal under test).
+  final size = env['SILICA_TERMINAL_SIZE']?.split('x');
+  final width = size != null && size.length == 2
+      ? double.tryParse(size[0])
+      : null;
+  final height = size != null && size.length == 2
+      ? double.tryParse(size[1])
+      : null;
+  SilicaWindow.setSize(
+    width != null && height != null ? Size(width, height) : defaultWindowSize,
+  ).ignore();
+  // SILICA_TERMINAL_ENGINE=grid: the embedder emulates the terminal and the app only paints
+  // the rows (experimental; measured against the default xterm.dart path).
+  if (env['SILICA_TERMINAL_ENGINE'] == 'grid') {
+    final colors = lightProfile.grid;
+    runApp(
+      Directionality(
+        textDirection: TextDirection.ltr,
+        child: ColoredBox(
+          color: colors.background,
+          child: Padding(
+            padding: const EdgeInsets.only(top: chromeHeight),
+            child: GridTerminalView(
+              session: GridSession(pty: SilicaPty(), command: command),
+              palette: GridPalette(
+                foreground: colors.foreground,
+                background: colors.background,
+                cursor: colors.cursor,
+              ),
+              textStyle: const TextStyle(
+                fontFamily: 'JetBrains Mono',
+                fontSize: terminalFontSize,
+                fontFamilyFallback: [
+                  'Noto Sans Mono',
+                  'DejaVu Sans Mono',
+                  'monospace',
+                ],
+              ),
+              padding: gridPadding,
+            ),
+          ),
+        ),
+      ),
+    );
+    return;
+  }
   runApp(
     AppLocalizationsScope(
       child: Directionality(

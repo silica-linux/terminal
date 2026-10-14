@@ -5,6 +5,8 @@
 // (base64); `resize {id, rows, cols, pixelWidth?, pixelHeight?}`; `signal {id, signal}`
 // ("INT", "TERM", "HUP", "KILL"); `close {id}`.
 // embedder → app: `output {id, data}` (base64), `exit {id, code?, signal?}`.
+// With `spawn {grid: true}` the embedder emulates the terminal and sends `grid {id, cols, rows,
+// full, lines: [{y, runs: [[text, fg, bg, flags]…]}], cursor, modes, title?}` instead of bytes.
 
 import 'dart:async';
 import 'dart:convert';
@@ -23,6 +25,13 @@ sealed class PtyEvent {
 class PtyOutput extends PtyEvent {
   const PtyOutput(super.id, this.data);
   final Uint8List data;
+}
+
+/// The rows of an emulated terminal that changed (`spawn(grid: true)`), as sent by the
+/// embedder: the raw message map, decoded by `GridState.apply`.
+class PtyGrid extends PtyEvent {
+  const PtyGrid(super.id, this.frame);
+  final Map<Object?, Object?> frame;
 }
 
 /// The process ended: with an exit `code`, or killed by `signal`.
@@ -49,6 +58,7 @@ abstract class PtyBackend {
     Map<String, String>? env,
     required int rows,
     required int cols,
+    bool grid = false,
   });
 
   Future<void> write(int id, Uint8List data);
@@ -104,6 +114,8 @@ class SilicaPty implements PtyBackend {
         } on FormatException {
           return null;
         }
+      case 'grid':
+        return PtyGrid(id, args);
       case 'exit':
         final code = args['code'];
         final signal = args['signal'];
@@ -131,6 +143,7 @@ class SilicaPty implements PtyBackend {
     Map<String, String>? env,
     required int rows,
     required int cols,
+    bool grid = false,
   }) async {
     final reply = await _invoke('spawn', {
       'command': ?command,
@@ -138,6 +151,7 @@ class SilicaPty implements PtyBackend {
       'env': ?env,
       'rows': rows,
       'cols': cols,
+      if (grid) 'grid': true,
     });
     final id = reply is Map ? reply['id'] : null;
     if (id is! int) {
@@ -203,6 +217,7 @@ class FakePty implements PtyBackend {
     Map<String, String>? env,
     required int rows,
     required int cols,
+    bool grid = false,
   }) async {
     final error = spawnError;
     if (error != null) throw error;
@@ -245,6 +260,10 @@ class FakePty implements PtyBackend {
   /// The process of `id` prints raw `bytes` (e.g. half of a UTF-8 sequence).
   void outputBytes(int id, List<int> bytes) =>
       _events.add(PtyOutput(id, Uint8List.fromList(bytes)));
+
+  /// The embedder sends a grid frame for `id`.
+  void grid(int id, Map<String, Object?> frame) =>
+      _events.add(PtyGrid(id, {'id': id, ...frame}));
 
   /// The process of `id` exits.
   void exit(int id, {int? code, int? signal}) =>

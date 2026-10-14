@@ -101,6 +101,9 @@ class TerminalSession extends ChangeNotifier {
             : l10n.processExited(code ?? 0);
         terminal.write('\r\n\x1b[2m$message\x1b[0m\r\n');
         notifyListeners();
+      case PtyGrid():
+        // Only grid sessions (spawn(grid: true)) receive rows.
+        break;
     }
   }
 
