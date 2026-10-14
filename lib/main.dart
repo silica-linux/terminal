@@ -2,7 +2,6 @@
 
 import 'dart:io';
 
-import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:silica_ui/silica_ui.dart';
 
@@ -77,12 +76,16 @@ void main(List<String> args) {
     AppLocalizationsScope(
       child: Directionality(
         textDirection: TextDirection.ltr,
-        child: TerminalWindow(
-          pty: SilicaPty(),
-          command: command,
-          cwd: env['HOME'],
-          shellName: shellName,
-          onLastTabClosed: () => SystemNavigator.pop(),
+        // Closing the last window keeps Terminal running; a reopen (the Dock, the Launcher)
+        // opens a new window with a new shell (APP-LC).
+        child: SilicaAppWindow(
+          builder: (context) => TerminalWindow(
+            pty: SilicaPty(),
+            command: command,
+            cwd: env['HOME'],
+            shellName: shellName,
+            onLastTabClosed: () => SilicaApp.closeWindow(),
+          ),
         ),
       ),
     ),
