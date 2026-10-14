@@ -1,0 +1,28 @@
+{
+  "@@locale": "en",
+  "appTitle": "Terminal",
+  "@appTitle": {"description": "Name of the app, in the window title and the Dock."},
+  "windowTitle": "{title} — {columns}×{rows}",
+  "@windowTitle": {
+    "description": "Window title: the running program or the title it set, then the size in character cells.",
+    "placeholders": {"title": {"type": "String"}, "columns": {"type": "int"}, "rows": {"type": "int"}}
+  },
+  "newTab": "New Tab",
+  "@newTab": {"description": "Command and button that opens a new tab."},
+  "closeTab": "Close Tab",
+  "@closeTab": {"description": "Command and button that closes the current tab."},
+  "noPty": "The terminal needs the Silica desktop: its pseudo-terminal service is not available here.",
+  "@noPty": {"description": "Shown in the terminal area when the app runs outside Silica, where the pseudo-terminal channel is missing."},
+  "spawnFailed": "Could not start the shell: {error}",
+  "@spawnFailed": {"description": "Shown when the shell process cannot be started.", "placeholders": {"error": {"type": "String"}}},
+  "processExited": "The process exited with code {code}.",
+  "@processExited": {"description": "Shown at the end of the output when the shell exits.", "placeholders": {"code": {"type": "int"}}},
+  "processKilled": "The process was ended by signal {signal}.",
+  "@processKilled": {"description": "Shown when the shell is ended by a signal.", "placeholders": {"signal": {"type": "int"}}},
+  "find": "Find",
+  "@find": {"description": "Placeholder of the find field."},
+  "findMatches": "{current} of {count}",
+  "@findMatches": {"description": "Position of the current match among all matches of the find field.", "placeholders": {"current": {"type": "int"}, "count": {"type": "int"}}},
+  "findNoMatches": "No matches",
+  "@findNoMatches": {"description": "The find field found nothing."}
+}

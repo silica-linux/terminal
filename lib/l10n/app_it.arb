@@ -1,0 +1,14 @@
+{
+  "@@locale": "it",
+  "appTitle": "Terminale",
+  "windowTitle": "{title} — {columns}×{rows}",
+  "newTab": "Nuovo pannello",
+  "closeTab": "Chiudi pannello",
+  "noPty": "Il terminale ha bisogno della scrivania di Silica: qui il suo servizio di pseudo-terminale non c'è.",
+  "spawnFailed": "Impossibile avviare la shell: {error}",
+  "processExited": "Il processo è terminato con il codice {code}.",
+  "processKilled": "Il processo è stato chiuso dal segnale {signal}.",
+  "find": "Cerca",
+  "findMatches": "{current} di {count}",
+  "findNoMatches": "Nessun risultato"
+}

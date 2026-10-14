@@ -1,0 +1,19 @@
+# Assets
+
+Every non-code file has a row here: author, license, source. The icon of Terminal lives in
+`silica-icons` (`apps/terminal`), not in this repository.
+
+| File | Author | License | Source |
+| --- | --- | --- | --- |
+| `.github/silica-logo-light.svg` | Silica project | Silica trademark, all rights reserved (`silica-brand` `TRADEMARKS.md`) | original, `silica-brand/exports/logotype/silica-logotype-horizontal-light.svg` |
+| `.github/silica-logo-dark.svg` | Silica project | Silica trademark, all rights reserved (`silica-brand` `TRADEMARKS.md`) | original, `silica-brand/exports/logotype/silica-logotype-horizontal-dark.svg` |
+| `fonts/JetBrainsMonoNL-Regular.ttf` | The JetBrains Mono Project Authors | OFL 1.1 (`fonts/OFL.txt`) | https://github.com/JetBrains/JetBrainsMono/releases/tag/v2.304 (`fonts/ttf`, the variant without ligatures) |
+| `fonts/JetBrainsMonoNL-Bold.ttf` | The JetBrains Mono Project Authors | OFL 1.1 (`fonts/OFL.txt`) | as above |
+| `fonts/JetBrainsMonoNL-Italic.ttf` | The JetBrains Mono Project Authors | OFL 1.1 (`fonts/OFL.txt`) | as above |
+| `fonts/JetBrainsMonoNL-BoldItalic.ttf` | The JetBrains Mono Project Authors | OFL 1.1 (`fonts/OFL.txt`) | as above |
+
+## Third-party code
+
+| Package | License | Use |
+| --- | --- | --- |
+| [`xterm`](https://pub.dev/packages/xterm) 4.0.0 (xterm.dart) | MIT | the terminal emulator and its view |
