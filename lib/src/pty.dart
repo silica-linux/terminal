@@ -189,8 +189,8 @@ class SilicaPty implements PtyBackend {
   @override
   Future<void> close(int id) => _invoke('close', {'id': id});
 
-  // provisional: the `busy` request is not in the embedder protocol yet; without it no tab
-  // counts as busy and closing never asks.
+  // `busy` (silica/pty): true while a foreground process other than the shell runs; an older
+  // embedder answers with an error, and the tab then counts as idle.
   @override
   Future<bool> hasForegroundProcess(int id) async {
     try {
