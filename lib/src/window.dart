@@ -432,17 +432,36 @@ class TerminalWindowState extends State<TerminalWindow>
       color: profile.chrome,
       // The title starts after the window buttons and the proxy icon (AX x +100, y +8); bold
       // ~13 pt, `#595959` / `#a1a1a1`.
-      padding: const EdgeInsets.only(left: 100, right: 16, top: 8),
-      alignment: Alignment.topLeft,
-      child: Text(
-        _title,
-        key: const ValueKey('title'),
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-        style: uiText(
-          size: 13,
-          color: _windowActive ? profile.title : profile.titleInactive,
-        ).copyWith(fontWeight: FontWeight.w600, height: 16 / 13),
+      child: Stack(
+        children: [
+          Positioned(
+            left: titleIconLeft,
+            top: titleIconTop,
+            width: titleIconSide,
+            height: titleIconSide,
+            child: CustomPaint(
+              key: const ValueKey('title icon'),
+              painter: _DocumentIconPainter(
+                _windowActive ? profile.title : profile.titleInactive,
+              ),
+            ),
+          ),
+          Positioned(
+            left: titleTextLeft,
+            right: titleRightInset,
+            top: 8,
+            child: Text(
+              _title,
+              key: const ValueKey('title'),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: uiText(
+                size: 13,
+                color: _windowActive ? profile.title : profile.titleInactive,
+              ).copyWith(fontWeight: FontWeight.w600, height: 16 / 13),
+            ),
+          ),
+        ],
       ),
     ),
   );
@@ -542,13 +561,18 @@ class TerminalWindowState extends State<TerminalWindow>
     ];
     final total = weights.fold<double>(0, (a, b) => a + b);
     if (total <= 0) return const SizedBox.shrink();
+    final widths = tabWidths(
+      width: width,
+      weights: weights,
+      selected: [
+        for (final slot in _slots)
+          _tabs.indexOf(slot.session) == _current && !slot.closing,
+      ].indexOf(true),
+    );
     return Row(
       children: [
         for (var i = 0; i < _slots.length; i++)
-          SizedBox(
-            width: width * weights[i] / total,
-            child: _tab(profile, _slots[i]),
-          ),
+          SizedBox(width: widths[i], child: _tab(profile, _slots[i])),
       ],
     );
   }
@@ -803,4 +827,34 @@ class _CrossPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_CrossPainter old) => old.color != color;
+}
+
+/// The proxy icon of the title: a sheet with a folded corner, 11 × 15 in an 18 × 18 cell.
+class _DocumentIconPainter extends CustomPainter {
+  const _DocumentIconPainter(this.color);
+
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final left = (size.width - 11) / 2;
+    final top = (size.height - 15) / 2;
+    final path = Path()
+      ..moveTo(left, top)
+      ..lineTo(left + 7, top)
+      ..lineTo(left + 11, top + 4)
+      ..lineTo(left + 11, top + 15)
+      ..lineTo(left, top + 15)
+      ..close();
+    canvas.drawPath(
+      path,
+      Paint()
+        ..color = color
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1,
+    );
+  }
+
+  @override
+  bool shouldRepaint(_DocumentIconPainter old) => old.color != color;
 }

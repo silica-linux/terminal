@@ -383,4 +383,47 @@ void main() {
     await tester.pump();
     expect(calls, contains('startMove'));
   });
+  testWidgets('the title is left-aligned with the proxy icon (titlebar.md)', (
+    tester,
+  ) async {
+    await pump(tester);
+    expect(tester.getSize(find.byKey(const ValueKey('title band'))).height, 32);
+    final icon = tester.getRect(find.byKey(const ValueKey('title icon')));
+    expect(icon.left, 81);
+    expect(icon.top, 6);
+    expect(icon.size, const Size(18, 18));
+    final title = tester.getRect(find.byKey(const ValueKey('title')));
+    expect(title.left, 100);
+    expect(title.right, 800 - 10);
+  });
+
+  testWidgets('the tab bar track and the new-tab circle (titlebar.md)', (
+    tester,
+  ) async {
+    await pump(tester);
+    final bar = tester.getRect(find.byKey(const ValueKey('tab bar')));
+    expect(bar.top, 32);
+    expect(bar.height, 28);
+    final plus = tester.getRect(find.byKey(const ValueKey('new tab')));
+    expect(plus.size, const Size(30, 30));
+    expect(800 - plus.right, 7);
+    expect(plus.center.dy, bar.center.dy);
+    final tab = tester.getRect(find.byKey(const ValueKey('tab 0')));
+    expect(tab.left, closeTo(10, 0.01));
+    expect(tab.right, closeTo(800 - 42, 0.01));
+  });
+
+  test('the selected tab keeps 120 pt while the others shrink', () {
+    final widths = tabWidths(width: 300, weights: [1, 1, 1, 1], selected: 2);
+    expect(widths[2], 120);
+    expect(widths.reduce((a, b) => a + b), closeTo(300, 0.001));
+    expect(widths[0], closeTo(60, 0.001));
+    expect(tabWidths(width: 300, weights: [1, 1], selected: 0), [150, 150]);
+    expect(tabWidths(width: 100, weights: [1], selected: 0), [100]);
+  });
+
+  test('the minimum window width keeps the traffic lights clear', () {
+    expect(minimumWindowSize.width, 177);
+    expect(minimumWindowWidth, 177);
+  });
 }

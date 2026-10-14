@@ -11,6 +11,17 @@ const double titleBarHeight = 32;
 /// The tab bar under the title band: always visible, even with one tab (AX 28 pt at y +32).
 const double tabBarHeight = 28;
 
+/// The title (titlebar.md, TITLEBAR-GLASS): left-aligned; the 18 × 18 proxy icon at (+81, +6),
+/// the text from x +100, 10 pt kept from the right edge (ellipsis).
+const double titleIconLeft = 81;
+const double titleIconTop = 6;
+const double titleIconSide = 18;
+const double titleTextLeft = 100;
+const double titleRightInset = 10;
+
+/// The selected tab keeps at least this width while the others shrink.
+const double selectedTabMinWidth = 120;
+
 /// A tab: a capsule 24 pt tall, 2 pt below the top of the bar, starting at x +10.
 const double tabHeight = 24;
 const double tabTop = 2;
@@ -68,6 +79,33 @@ const int defaultRows = 24;
 const int minimumColumns = 20;
 const int minimumRows = 4;
 
+/// The narrowest window that keeps the window buttons clear (177 pt, titlebar.md).
+const double minimumWindowWidth = 177;
+
+/// The widths of the tabs in a track `width` wide: shared by `weights` (presence, so that
+/// opening and closing animate), except that the `selected` tab (index or -1) keeps at least
+/// [selectedTabMinWidth] and the others take what is left.
+List<double> tabWidths({
+  required double width,
+  required List<double> weights,
+  required int selected,
+}) {
+  final total = weights.fold<double>(0, (a, b) => a + b);
+  if (total <= 0) return [for (final _ in weights) 0];
+  final widths = [for (final w in weights) width * w / total];
+  if (selected < 0 || widths[selected] >= selectedTabMinWidth) return widths;
+  final keep = selectedTabMinWidth < width ? selectedTabMinWidth : width;
+  final others = total - weights[selected];
+  return [
+    for (var i = 0; i < widths.length; i++)
+      i == selected
+          ? keep
+          : others <= 0
+          ? 0
+          : (width - keep) * weights[i] / others,
+  ];
+}
+
 /// The window width for `columns`: 10 + 7 · columns + 27 (80 → 597).
 double windowWidth(int columns) =>
     gridPadding.left + cellSize.width * columns + gridPadding.right;
@@ -85,8 +123,12 @@ Size get defaultWindowSize =>
     Size(windowWidth(defaultColumns), windowHeight(defaultRows));
 
 /// The smallest window size.
-Size get minimumWindowSize =>
-    Size(windowWidth(minimumColumns), windowHeight(minimumRows));
+Size get minimumWindowSize => Size(
+  windowWidth(minimumColumns) > minimumWindowWidth
+      ? windowWidth(minimumColumns)
+      : minimumWindowWidth,
+  windowHeight(minimumRows),
+);
 
 /// The cursor blinks 500 ms on, 500 ms off when a program asks for a blinking shape; the
 /// default is steady.
