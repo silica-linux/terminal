@@ -9,7 +9,8 @@ never crash, everything is a command, measured parity, English everywhere). On t
   (request TE-01, silica-reference#75; measurements in `terminal.md`), never here. Here only
   the request codes and the measured numbers are cited.
 - Interface texts are our own words; no product names or texts copied from the reference.
-- The default profiles and the ANSI palette are our own values until measured.
+- The geometry, the default profiles and the ANSI palette are measured (TE-01, `docs/parity.md`); the names of
+  the profiles are ours.
 
 ## Work
 
