@@ -76,6 +76,9 @@ abstract class PtyBackend {
 
   Future<void> close(int id);
 
+  /// A process other than the shell runs in the foreground of the pseudo-terminal `id`.
+  Future<bool> hasForegroundProcess(int id);
+
   /// Output and exits of every pseudo-terminal.
   Stream<PtyEvent> get events;
 }
@@ -185,6 +188,17 @@ class SilicaPty implements PtyBackend {
 
   @override
   Future<void> close(int id) => _invoke('close', {'id': id});
+
+  // provisional: the `busy` request is not in the embedder protocol yet; without it no tab
+  // counts as busy and closing never asks.
+  @override
+  Future<bool> hasForegroundProcess(int id) async {
+    try {
+      return await _invoke('busy', {'id': id}) == true;
+    } on Object {
+      return false;
+    }
+  }
 }
 
 /// A pseudo-terminal backend in memory, for tests: records what the app does and lets the
@@ -252,6 +266,12 @@ class FakePty implements PtyBackend {
 
   @override
   Future<void> close(int id) async => calls.add(('close', id, null));
+
+  /// Ids whose shell has a foreground program (vim, a build, ...).
+  final Set<int> busy = {};
+
+  @override
+  Future<bool> hasForegroundProcess(int id) async => busy.contains(id);
 
   /// The process of `id` prints `text`.
   void output(int id, String text) =>

@@ -23,6 +23,20 @@ class AppLocalizationsEn extends AppLocalizations {
   String get closeTab => 'Close Tab';
 
   @override
+  String get closeTabConfirmTitle =>
+      'Do you want to terminate running processes in this tab?';
+
+  @override
+  String get closeTabConfirmMessage =>
+      'Closing this tab will terminate the running processes in it.';
+
+  @override
+  String get terminate => 'Terminate';
+
+  @override
+  String get cancel => 'Cancel';
+
+  @override
   String get noPty =>
       'The terminal needs the Silica desktop: its pseudo-terminal service is not available here.';
 

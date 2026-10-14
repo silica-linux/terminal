@@ -90,6 +90,7 @@ class _TabSlot {
   final TerminalSession session;
   final AnimationController presence;
   bool closing = false;
+  bool hover = false;
 }
 
 class TerminalWindowState extends State<TerminalWindow>
@@ -107,6 +108,9 @@ class TerminalWindowState extends State<TerminalWindow>
   final FocusNode _gridFocus = FocusNode();
   List<SearchMatch> _matches = const [];
   int _match = 0;
+
+  /// The tab waiting for the answer of the "terminate running processes?" alert.
+  TerminalSession? _confirming;
   SearchHighlights? _highlights;
 
   bool _windowActive = _isActive(WidgetsBinding.instance.lifecycleState);
@@ -219,6 +223,56 @@ class TerminalWindowState extends State<TerminalWindow>
     _endFind();
   }
 
+  /// Closes a tab like the × and ⌘W do: when a program other than the shell runs in it, asks
+  /// first ("Do you want to terminate running processes in this tab?").
+  Future<void> requestCloseTab([int? index]) async {
+    final i = index ?? _current;
+    if (i < 0 || i >= _tabs.length || _confirming != null) return;
+    final session = _tabs[i];
+    if (await session.hasForegroundProcess()) {
+      if (!mounted || !_tabs.contains(session)) return;
+      setState(() => _confirming = session);
+      return;
+    }
+    if (mounted && _tabs.contains(session)) closeTab(_tabs.indexOf(session));
+  }
+
+  void _answerClose(bool terminate) {
+    final session = _confirming;
+    setState(() => _confirming = null);
+    if (terminate && session != null && _tabs.contains(session)) {
+      closeTab(_tabs.indexOf(session));
+    }
+    if (!_finding) _gridFocus.requestFocus();
+  }
+
+  Widget _confirmOverlay() => Positioned.fill(
+    key: const ValueKey('close confirmation'),
+    child: ColoredBox(
+      color: const Color(0x33000000), // provisional
+      child: Center(
+        child: SilicaAlert(
+          opaque: true,
+          sideBySide: true,
+          title: l10n.closeTabConfirmTitle,
+          message: l10n.closeTabConfirmMessage,
+          buttons: [
+            AlertButton(
+              l10n.cancel,
+              role: AlertRole.cancel,
+              onPressed: () => _answerClose(false),
+            ),
+            AlertButton(
+              l10n.terminate,
+              role: AlertRole.destructive,
+              onPressed: () => _answerClose(true),
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
+
   void selectTab(int index) {
     if (index < 0 || index >= _tabs.length) return;
     setState(() => _current = index);
@@ -301,11 +355,11 @@ class TerminalWindowState extends State<TerminalWindow>
       return ColoredBox(color: profile.grid.background);
     }
     final s = session;
-    return Actions(
+    final content = Actions(
       actions: {
         _NewTabIntent: CallbackAction<_NewTabIntent>(onInvoke: (_) => newTab()),
         _CloseTabIntent: CallbackAction<_CloseTabIntent>(
-          onInvoke: (_) => closeTab(),
+          onInvoke: (_) => requestCloseTab(),
         ),
         _StepTabIntent: CallbackAction<_StepTabIntent>(
           onInvoke: (intent) => _step(intent.by),
@@ -367,6 +421,8 @@ class TerminalWindowState extends State<TerminalWindow>
         ),
       ),
     );
+    if (_confirming == null) return content;
+    return Stack(fit: StackFit.expand, children: [content, _confirmOverlay()]);
   }
 
   Widget _titleBand(Profile profile) => WindowDragArea(
@@ -500,22 +556,46 @@ class TerminalWindowState extends State<TerminalWindow>
   Widget _tab(Profile profile, _TabSlot slot) {
     final index = _tabs.indexOf(slot.session);
     final selected = index == _current && !slot.closing;
-    return GestureDetector(
-      key: index < 0 ? null : ValueKey('tab $index'),
-      behavior: HitTestBehavior.opaque,
-      onTap: index < 0 ? null : () => selectTab(index),
-      child: ClipRect(
-        child: Container(
-          margin: const EdgeInsets.all(1),
-          decoration: selected
-              ? BoxDecoration(
-                  color: profile.tabActive,
-                  borderRadius: BorderRadius.circular((tabHeight - 2) / 2),
-                )
-              : null,
-          alignment: Alignment.center,
-          padding: const EdgeInsets.symmetric(horizontal: 24),
-          child: _tabLabel(slot.session, profile, selected),
+    final canClose = index >= 0 && !slot.closing;
+    return MouseRegion(
+      onEnter: (_) => setState(() => slot.hover = true),
+      onExit: (_) => setState(() => slot.hover = false),
+      child: GestureDetector(
+        key: index < 0 ? null : ValueKey('tab $index'),
+        behavior: HitTestBehavior.opaque,
+        onTap: index < 0 ? null : () => selectTab(index),
+        child: ClipRect(
+          child: Container(
+            margin: const EdgeInsets.all(1),
+            decoration: selected
+                ? BoxDecoration(
+                    color: profile.tabActive,
+                    borderRadius: BorderRadius.circular((tabHeight - 2) / 2),
+                  )
+                : null,
+            alignment: Alignment.center,
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  child: Center(
+                    child: _tabLabel(slot.session, profile, selected),
+                  ),
+                ),
+                if (slot.hover && canClose)
+                  Positioned(
+                    left: tabCloseLeft - 1,
+                    top: (tabHeight - 2 - tabCloseSide) / 2,
+                    child: _TabCloseButton(
+                      key: ValueKey('tab close $index'),
+                      color: profile.tabText,
+                      onPressed: () => requestCloseTab(index),
+                    ),
+                  ),
+              ],
+            ),
+          ),
         ),
       ),
     );
@@ -650,4 +730,77 @@ class TerminalWindowState extends State<TerminalWindow>
       ),
     );
   }
+}
+
+/// The × at the leading edge of a hovered tab: 18 × 18, 4 pt from the tab edge; a round
+/// highlight while pressed.
+class _TabCloseButton extends StatefulWidget {
+  const _TabCloseButton({
+    super.key,
+    required this.color,
+    required this.onPressed,
+  });
+
+  final Color color;
+  final VoidCallback onPressed;
+
+  @override
+  State<_TabCloseButton> createState() => _TabCloseButtonState();
+}
+
+class _TabCloseButtonState extends State<_TabCloseButton> {
+  bool _pressed = false;
+
+  @override
+  Widget build(BuildContext context) => Semantics(
+    label: l10n.closeTab,
+    button: true,
+    child: GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTapDown: (_) => setState(() => _pressed = true),
+      onTapCancel: () => setState(() => _pressed = false),
+      onTapUp: (_) => setState(() => _pressed = false),
+      onTap: widget.onPressed,
+      child: Container(
+        key: const ValueKey('tab close glyph'),
+        width: tabCloseSide,
+        height: tabCloseSide,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          // provisional: highlight only while pressed
+          color: _pressed ? widget.color.withValues(alpha: 0.2) : null,
+        ),
+        child: CustomPaint(painter: _CrossPainter(widget.color)),
+      ),
+    ),
+  );
+}
+
+class _CrossPainter extends CustomPainter {
+  const _CrossPainter(this.color);
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..strokeWidth =
+          1.3 // provisional
+      ..strokeCap = StrokeCap.round;
+    final c = size.center(Offset.zero);
+    const arm = 3.0; // provisional
+    canvas.drawLine(
+      c + const Offset(-arm, -arm),
+      c + const Offset(arm, arm),
+      paint,
+    );
+    canvas.drawLine(
+      c + const Offset(-arm, arm),
+      c + const Offset(arm, -arm),
+      paint,
+    );
+  }
+
+  @override
+  bool shouldRepaint(_CrossPainter old) => old.color != color;
 }

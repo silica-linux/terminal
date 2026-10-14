@@ -128,6 +128,13 @@ class TerminalSession extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// A program other than the shell runs in the foreground (closing would terminate it).
+  Future<bool> hasForegroundProcess() async {
+    final id = _id;
+    if (id == null || _ended) return false;
+    return pty.hasForegroundProcess(id);
+  }
+
   /// Sends Ctrl-C's signal to the process.
   void interrupt() {
     final id = _id;

@@ -23,6 +23,20 @@ class AppLocalizationsIt extends AppLocalizations {
   String get closeTab => 'Chiudi pannello';
 
   @override
+  String get closeTabConfirmTitle =>
+      'Vuoi terminare i processi in esecuzione in questo pannello?';
+
+  @override
+  String get closeTabConfirmMessage =>
+      'Chiudendo questo pannello verranno terminati i processi in esecuzione.';
+
+  @override
+  String get terminate => 'Termina';
+
+  @override
+  String get cancel => 'Annulla';
+
+  @override
   String get noPty =>
       'Il terminale ha bisogno della scrivania di Silica: qui il suo servizio di pseudo-terminale non c\'è.';
 

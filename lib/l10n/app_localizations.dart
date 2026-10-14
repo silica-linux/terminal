@@ -122,6 +122,30 @@ abstract class AppLocalizations {
   /// **'Close Tab'**
   String get closeTab;
 
+  /// Title of the alert shown when closing a tab whose shell runs another program.
+  ///
+  /// In en, this message translates to:
+  /// **'Do you want to terminate running processes in this tab?'**
+  String get closeTabConfirmTitle;
+
+  /// Message of that alert.
+  ///
+  /// In en, this message translates to:
+  /// **'Closing this tab will terminate the running processes in it.'**
+  String get closeTabConfirmMessage;
+
+  /// Destructive button of that alert.
+  ///
+  /// In en, this message translates to:
+  /// **'Terminate'**
+  String get terminate;
+
+  /// Button that dismisses an alert without acting.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel'**
+  String get cancel;
+
   /// Shown in the terminal area when the app runs outside Silica, where the pseudo-terminal channel is missing.
   ///
   /// In en, this message translates to:

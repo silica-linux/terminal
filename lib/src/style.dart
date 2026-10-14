@@ -14,6 +14,10 @@ const double tabBarHeight = 28;
 /// A tab: a capsule 24 pt tall, 2 pt below the top of the bar, starting at x +10.
 const double tabHeight = 24;
 const double tabTop = 2;
+
+/// The × of a hovered tab: 18 × 18, 4 pt from the tab's left edge.
+const double tabCloseSide = 18;
+const double tabCloseLeft = 4;
 const double tabBarLeft = 10;
 
 /// The new-tab button: a 30 × 30 circle at (+560, +31) in an 80-column window, so its right

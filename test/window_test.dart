@@ -182,6 +182,129 @@ void main() {
     expect(find.byKey(const ValueKey('tab 1')), findsNothing);
   });
 
+  Future<TestGesture> hover(WidgetTester tester, String key) async {
+    final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
+    await mouse.addPointer(location: const Offset(700, 400));
+    addTearDown(mouse.removePointer);
+    await mouse.moveTo(tester.getCenter(find.byKey(ValueKey(key))));
+    await tester.pump();
+    return mouse;
+  }
+
+  testWidgets('the × shows on hover only, 18 × 18 at tab x +4', (tester) async {
+    await pump(tester);
+    expect(find.byKey(const ValueKey('tab close 0')), findsNothing);
+    await hover(tester, 'tab 0');
+    final close = find.byKey(const ValueKey('tab close 0'));
+    expect(close, findsOneWidget);
+    expect(tester.getSize(close), const Size(18, 18));
+    expect(
+      tester.getTopLeft(close).dx -
+          tester.getTopLeft(find.byKey(const ValueKey('tab 0'))).dx,
+      4,
+    );
+  });
+
+  testWidgets('the × has a pressed state and closes the tab and its pty', (
+    tester,
+  ) async {
+    final (pty, window) = await pump(tester);
+    await keys(tester, LogicalKeyboardKey.keyT, meta: true);
+    await tester.pumpAndSettle();
+    final mouse = await hover(tester, 'tab 0');
+    final close = find.byKey(const ValueKey('tab close 0'));
+    BoxDecoration glyph() =>
+        tester
+                .widget<Container>(
+                  find.byKey(const ValueKey('tab close glyph')),
+                )
+                .decoration!
+            as BoxDecoration;
+    expect(glyph().color, isNull);
+    await mouse.moveTo(tester.getCenter(close));
+    await mouse.down(tester.getCenter(close));
+    await tester.pump(kPressTimeout);
+    expect(glyph().color, isNotNull);
+    await mouse.up();
+    await tester.pump();
+    await tester.pump();
+    expect(window.tabs, hasLength(1));
+    expect(pty.calls.where((c) => c.$1 == 'close').single.$2, 1);
+    await tester.pumpAndSettle();
+  });
+
+  testWidgets('closing the last tab with the × closes the window', (
+    tester,
+  ) async {
+    var closed = false;
+    final pty = FakePty();
+    tester.view.physicalSize = const Size(800, 600);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(
+      AppLocalizationsScope(
+        locale: const Locale('en'),
+        child: Directionality(
+          textDirection: TextDirection.ltr,
+          child: TerminalWindow(
+            pty: pty,
+            shellName: 'bash',
+            onLastTabClosed: () => closed = true,
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.pump();
+    await hover(tester, 'tab 0');
+    await tester.tap(find.byKey(const ValueKey('tab close 0')));
+    await tester.pump();
+    await tester.pump();
+    expect(closed, isTrue);
+  });
+
+  testWidgets('a busy tab asks before closing; Cancel keeps it', (
+    tester,
+  ) async {
+    final (pty, window) = await pump(tester);
+    pty.busy.add(1);
+    await keys(tester, LogicalKeyboardKey.keyW, meta: true);
+    expect(
+      find.text('Do you want to terminate running processes in this tab?'),
+      findsOneWidget,
+    );
+    expect(window.tabs, hasLength(1));
+    await tester.tap(find.text('Cancel'));
+    await tester.pump();
+    expect(find.byKey(const ValueKey('close confirmation')), findsNothing);
+    expect(window.tabs, hasLength(1));
+    expect(pty.calls.where((c) => c.$1 == 'close'), isEmpty);
+  });
+
+  testWidgets('a busy tab: Terminate closes it (× and ⌘W alike)', (
+    tester,
+  ) async {
+    final (pty, window) = await pump(tester);
+    await keys(tester, LogicalKeyboardKey.keyT, meta: true);
+    await tester.pumpAndSettle();
+    pty.busy.addAll([1, 2]);
+    await hover(tester, 'tab 0');
+    await tester.tap(find.byKey(const ValueKey('tab close 0')));
+    await tester.pump();
+    await tester.pump();
+    expect(find.byKey(const ValueKey('close confirmation')), findsOneWidget);
+    await tester.tap(find.text('Terminate'));
+    await tester.pump();
+    expect(window.tabs, hasLength(1));
+    expect(pty.calls.where((c) => c.$1 == 'close').single.$2, 1);
+    await tester.pumpAndSettle();
+    await keys(tester, LogicalKeyboardKey.keyW, meta: true);
+    expect(find.byKey(const ValueKey('close confirmation')), findsOneWidget);
+    await tester.tap(find.text('Terminate'));
+    await tester.pump();
+    expect(window.tabs, isEmpty);
+  });
+
   testWidgets('find: ⌘F, matches counted, Esc closes', (tester) async {
     final (pty, _) = await pump(tester);
     pty.output(1, 'one fish\r\ntwo FISH\r\nred');
