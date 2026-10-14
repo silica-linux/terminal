@@ -1,0 +1,17 @@
+[Desktop Entry]
+Type=Application
+Name=Terminal
+Name[it]=Terminale
+GenericName=Terminal
+GenericName[it]=Terminale
+Comment=Command line and shell
+Comment[it]=Riga di comando e shell
+Exec=@EMBEDDER@ --size 640x420 --title Terminal --app-id dev.frascella.Terminal @BUNDLE@
+Icon=utilities-terminal
+X-Silica-Icon=terminal
+StartupWMClass=dev.frascella.Terminal
+Categories=System;TerminalEmulator;
+Keywords=shell;prompt;command;commandline;
+Keywords[it]=shell;prompt;comando;riga di comando;
+Terminal=false
+OnlyShowIn=Silica;
