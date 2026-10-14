@@ -11,6 +11,7 @@ Every non-code file has a row here: author, license, source. The icon of Termina
 | `fonts/JetBrainsMonoNL-Bold.ttf` | The JetBrains Mono Project Authors | OFL 1.1 (`fonts/OFL.txt`) | as above |
 | `fonts/JetBrainsMonoNL-Italic.ttf` | The JetBrains Mono Project Authors | OFL 1.1 (`fonts/OFL.txt`) | as above |
 | `fonts/JetBrainsMonoNL-BoldItalic.ttf` | The JetBrains Mono Project Authors | OFL 1.1 (`fonts/OFL.txt`) | as above |
+| `docs/spec/diagrams/window-geometry.svg` | Silica project | MIT OR Apache-2.0 | original, drawn by hand from the measurements in `docs/spec` |
 
 ## Third-party code
 
