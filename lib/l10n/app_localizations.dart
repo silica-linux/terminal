@@ -205,6 +205,606 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Done'**
   String get findDone;
+
+  /// Menu bar: the Shell menu.
+  ///
+  /// In en, this message translates to:
+  /// **'Shell'**
+  String get menuShell;
+
+  /// Menu bar: the Edit menu.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit'**
+  String get menuEdit;
+
+  /// Menu bar: the View menu.
+  ///
+  /// In en, this message translates to:
+  /// **'View'**
+  String get menuView;
+
+  /// Menu bar: the Window menu.
+  ///
+  /// In en, this message translates to:
+  /// **'Window'**
+  String get menuWindow;
+
+  /// Menu bar: the Help menu.
+  ///
+  /// In en, this message translates to:
+  /// **'Help'**
+  String get menuHelp;
+
+  /// App menu item.
+  ///
+  /// In en, this message translates to:
+  /// **'Secure Keyboard Entry'**
+  String get secureKeyboardEntry;
+
+  /// Shell menu: submenu.
+  ///
+  /// In en, this message translates to:
+  /// **'New Window'**
+  String get newWindow;
+
+  /// Shell menu: new window with the default profile.
+  ///
+  /// In en, this message translates to:
+  /// **'New Window with Profile - {profile}'**
+  String newWindowWithProfile(String profile);
+
+  /// Shell menu.
+  ///
+  /// In en, this message translates to:
+  /// **'New Window with Same Command'**
+  String get newWindowSameCommand;
+
+  /// Shell menu: new tab with the default profile.
+  ///
+  /// In en, this message translates to:
+  /// **'New Tab with Profile - {profile}'**
+  String newTabWithProfile(String profile);
+
+  /// Shell menu.
+  ///
+  /// In en, this message translates to:
+  /// **'New Tab with Same Command'**
+  String get newTabSameCommand;
+
+  /// Shell menu.
+  ///
+  /// In en, this message translates to:
+  /// **'New Command…'**
+  String get newCommand;
+
+  /// Shell menu.
+  ///
+  /// In en, this message translates to:
+  /// **'New Remote Connection…'**
+  String get newRemoteConnection;
+
+  /// Shell menu.
+  ///
+  /// In en, this message translates to:
+  /// **'Open…'**
+  String get open;
+
+  /// Shell menu: closes the window when it has one tab.
+  ///
+  /// In en, this message translates to:
+  /// **'Close Window'**
+  String get closeWindow;
+
+  /// Shell menu.
+  ///
+  /// In en, this message translates to:
+  /// **'Close All'**
+  String get closeAll;
+
+  /// Shell menu.
+  ///
+  /// In en, this message translates to:
+  /// **'Use Settings as Default'**
+  String get useSettingsAsDefault;
+
+  /// Shell menu.
+  ///
+  /// In en, this message translates to:
+  /// **'Export Settings…'**
+  String get exportSettings;
+
+  /// Shell menu.
+  ///
+  /// In en, this message translates to:
+  /// **'Export Text As…'**
+  String get exportText;
+
+  /// Shell menu.
+  ///
+  /// In en, this message translates to:
+  /// **'Export Selected Text As…'**
+  String get exportSelectedText;
+
+  /// Shell menu.
+  ///
+  /// In en, this message translates to:
+  /// **'Show Inspector'**
+  String get showInspector;
+
+  /// Shell menu.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit Title'**
+  String get editTitle;
+
+  /// Shell menu.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit Background Color'**
+  String get editBackgroundColor;
+
+  /// Shell menu: resets the terminal.
+  ///
+  /// In en, this message translates to:
+  /// **'Reset'**
+  String get reset;
+
+  /// Shell menu.
+  ///
+  /// In en, this message translates to:
+  /// **'Hard Reset'**
+  String get hardReset;
+
+  /// Shell menu.
+  ///
+  /// In en, this message translates to:
+  /// **'Print Selection…'**
+  String get printSelection;
+
+  /// Shell menu.
+  ///
+  /// In en, this message translates to:
+  /// **'Print…'**
+  String get print;
+
+  /// Edit menu: submenu.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy Special'**
+  String get copySpecial;
+
+  /// Edit menu.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy Without Background Color'**
+  String get copyWithoutBackground;
+
+  /// Edit menu.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy Text Only'**
+  String get copyTextOnly;
+
+  /// Edit menu: heading of the styles.
+  ///
+  /// In en, this message translates to:
+  /// **'Style for Copy Command'**
+  String get copyStyle;
+
+  /// Edit menu: copy style that follows the profile.
+  ///
+  /// In en, this message translates to:
+  /// **'Terminal Settings (default)'**
+  String get terminalSettingsDefault;
+
+  /// Edit menu: copy style.
+  ///
+  /// In en, this message translates to:
+  /// **'Text Only'**
+  String get plainText;
+
+  /// Edit menu.
+  ///
+  /// In en, this message translates to:
+  /// **'Paste Escaped Text'**
+  String get pasteEscaped;
+
+  /// Edit menu.
+  ///
+  /// In en, this message translates to:
+  /// **'Paste Selection'**
+  String get pasteSelection;
+
+  /// Edit menu.
+  ///
+  /// In en, this message translates to:
+  /// **'Paste Selection Escaped'**
+  String get pasteSelectionEscaped;
+
+  /// Edit menu.
+  ///
+  /// In en, this message translates to:
+  /// **'Select Between Marks'**
+  String get selectBetweenMarks;
+
+  /// Edit menu: submenu.
+  ///
+  /// In en, this message translates to:
+  /// **'Marks'**
+  String get marks;
+
+  /// Edit menu.
+  ///
+  /// In en, this message translates to:
+  /// **'Automatically Mark Prompt Lines'**
+  String get autoMarkPrompts;
+
+  /// Edit menu.
+  ///
+  /// In en, this message translates to:
+  /// **'Mark Line and Start New Line'**
+  String get markLineAndNewline;
+
+  /// Edit menu.
+  ///
+  /// In en, this message translates to:
+  /// **'Start New Line Without Marking'**
+  String get newlineWithoutMark;
+
+  /// Edit menu.
+  ///
+  /// In en, this message translates to:
+  /// **'Mark'**
+  String get mark;
+
+  /// Edit menu.
+  ///
+  /// In en, this message translates to:
+  /// **'Mark as Bookmark'**
+  String get markAsBookmark;
+
+  /// Edit menu.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove Mark'**
+  String get removeMark;
+
+  /// Edit menu: submenu.
+  ///
+  /// In en, this message translates to:
+  /// **'Bookmarks'**
+  String get bookmarks;
+
+  /// Edit menu.
+  ///
+  /// In en, this message translates to:
+  /// **'Insert Bookmark'**
+  String get insertBookmark;
+
+  /// Edit menu.
+  ///
+  /// In en, this message translates to:
+  /// **'Insert Bookmark with Name…'**
+  String get insertNamedBookmark;
+
+  /// Edit menu: empty list of bookmarks.
+  ///
+  /// In en, this message translates to:
+  /// **'No Bookmarks'**
+  String get noBookmarks;
+
+  /// Edit menu: submenu.
+  ///
+  /// In en, this message translates to:
+  /// **'Navigate'**
+  String get navigate;
+
+  /// Edit menu.
+  ///
+  /// In en, this message translates to:
+  /// **'Go to Previous Mark'**
+  String get previousMark;
+
+  /// Edit menu.
+  ///
+  /// In en, this message translates to:
+  /// **'Select to Previous Mark'**
+  String get selectToPreviousMark;
+
+  /// Edit menu.
+  ///
+  /// In en, this message translates to:
+  /// **'Go to Next Mark'**
+  String get nextMark;
+
+  /// Edit menu.
+  ///
+  /// In en, this message translates to:
+  /// **'Select to Next Mark'**
+  String get selectToNextMark;
+
+  /// Edit menu.
+  ///
+  /// In en, this message translates to:
+  /// **'Go to Previous Bookmark'**
+  String get previousBookmark;
+
+  /// Edit menu.
+  ///
+  /// In en, this message translates to:
+  /// **'Select to Previous Bookmark'**
+  String get selectToPreviousBookmark;
+
+  /// Edit menu.
+  ///
+  /// In en, this message translates to:
+  /// **'Go to Next Bookmark'**
+  String get nextBookmark;
+
+  /// Edit menu.
+  ///
+  /// In en, this message translates to:
+  /// **'Select to Next Bookmark'**
+  String get selectToNextBookmark;
+
+  /// Edit menu.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear to Previous Mark'**
+  String get clearToPreviousMark;
+
+  /// Edit menu.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear to Previous Bookmark'**
+  String get clearToPreviousBookmark;
+
+  /// Edit menu.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear to Start'**
+  String get clearToStart;
+
+  /// Edit menu.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove Excess Lines'**
+  String get removeExcessLines;
+
+  /// Edit menu.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear Screen'**
+  String get clearScreen;
+
+  /// Edit menu.
+  ///
+  /// In en, this message translates to:
+  /// **'Fill Screen'**
+  String get fillScreen;
+
+  /// Edit menu, Find submenu: opens the find bar.
+  ///
+  /// In en, this message translates to:
+  /// **'Find…'**
+  String get findEllipsis;
+
+  /// Edit menu, Find submenu.
+  ///
+  /// In en, this message translates to:
+  /// **'Find Next'**
+  String get findNextItem;
+
+  /// Edit menu, Find submenu.
+  ///
+  /// In en, this message translates to:
+  /// **'Find Previous'**
+  String get findPreviousItem;
+
+  /// Edit menu, Find submenu: selects all matches.
+  ///
+  /// In en, this message translates to:
+  /// **'Select All'**
+  String get findSelectAll;
+
+  /// Edit menu, Find submenu.
+  ///
+  /// In en, this message translates to:
+  /// **'Select All in Selection'**
+  String get findSelectAllInSelection;
+
+  /// Edit menu, Find submenu.
+  ///
+  /// In en, this message translates to:
+  /// **'Hide Find Bar'**
+  String get hideFindBar;
+
+  /// Edit menu, Find submenu.
+  ///
+  /// In en, this message translates to:
+  /// **'Use Selection for Find'**
+  String get useSelectionForFind;
+
+  /// Edit menu, Find submenu.
+  ///
+  /// In en, this message translates to:
+  /// **'Jump to Selection'**
+  String get jumpToSelection;
+
+  /// Edit menu.
+  ///
+  /// In en, this message translates to:
+  /// **'Show Colors'**
+  String get showColors;
+
+  /// Edit menu.
+  ///
+  /// In en, this message translates to:
+  /// **'Use Option as Meta Key'**
+  String get optionAsMeta;
+
+  /// Edit menu.
+  ///
+  /// In en, this message translates to:
+  /// **'Num Lock'**
+  String get numLock;
+
+  /// View menu.
+  ///
+  /// In en, this message translates to:
+  /// **'Show All Tabs'**
+  String get showAllTabs;
+
+  /// View menu.
+  ///
+  /// In en, this message translates to:
+  /// **'Show Tab Bar'**
+  String get showTabBar;
+
+  /// View menu.
+  ///
+  /// In en, this message translates to:
+  /// **'Hide Marks'**
+  String get hideMarks;
+
+  /// View menu.
+  ///
+  /// In en, this message translates to:
+  /// **'Show Alternate Screen'**
+  String get showAlternateScreen;
+
+  /// View menu.
+  ///
+  /// In en, this message translates to:
+  /// **'Hide Alternate Screen'**
+  String get hideAlternateScreen;
+
+  /// View menu.
+  ///
+  /// In en, this message translates to:
+  /// **'Allow Mouse Reporting'**
+  String get allowMouseReporting;
+
+  /// View menu.
+  ///
+  /// In en, this message translates to:
+  /// **'Split Pane'**
+  String get splitPane;
+
+  /// View menu.
+  ///
+  /// In en, this message translates to:
+  /// **'Close Split Pane'**
+  String get closeSplitPane;
+
+  /// View menu.
+  ///
+  /// In en, this message translates to:
+  /// **'Default Font Size'**
+  String get defaultFontSize;
+
+  /// View menu.
+  ///
+  /// In en, this message translates to:
+  /// **'Bigger'**
+  String get fontBigger;
+
+  /// View menu.
+  ///
+  /// In en, this message translates to:
+  /// **'Smaller'**
+  String get fontSmaller;
+
+  /// View menu.
+  ///
+  /// In en, this message translates to:
+  /// **'Scroll to Top'**
+  String get scrollToTop;
+
+  /// View menu.
+  ///
+  /// In en, this message translates to:
+  /// **'Scroll to Bottom'**
+  String get scrollToBottom;
+
+  /// View menu: scrolls one page up.
+  ///
+  /// In en, this message translates to:
+  /// **'Page Up'**
+  String get pageUp;
+
+  /// View menu: scrolls one page down.
+  ///
+  /// In en, this message translates to:
+  /// **'Page Down'**
+  String get pageDown;
+
+  /// View menu: scrolls one line up.
+  ///
+  /// In en, this message translates to:
+  /// **'Line Up'**
+  String get lineUp;
+
+  /// View menu: scrolls one line down.
+  ///
+  /// In en, this message translates to:
+  /// **'Line Down'**
+  String get lineDown;
+
+  /// Window menu.
+  ///
+  /// In en, this message translates to:
+  /// **'Show Previous Tab'**
+  String get showPreviousTab;
+
+  /// Window menu.
+  ///
+  /// In en, this message translates to:
+  /// **'Show Next Tab'**
+  String get showNextTab;
+
+  /// Window menu.
+  ///
+  /// In en, this message translates to:
+  /// **'Move Tab to New Window'**
+  String get moveTabToNewWindow;
+
+  /// Window menu.
+  ///
+  /// In en, this message translates to:
+  /// **'Merge All Windows'**
+  String get mergeAllWindows;
+
+  /// Window menu: submenu.
+  ///
+  /// In en, this message translates to:
+  /// **'Open Window Group'**
+  String get openWindowGroup;
+
+  /// Window menu.
+  ///
+  /// In en, this message translates to:
+  /// **'No Window Groups'**
+  String get noWindowGroups;
+
+  /// Window menu.
+  ///
+  /// In en, this message translates to:
+  /// **'Save Windows as Group…'**
+  String get saveWindowsAsGroup;
+
+  /// Help menu.
+  ///
+  /// In en, this message translates to:
+  /// **'Open man Page for Selection'**
+  String get openManPage;
+
+  /// Help menu.
+  ///
+  /// In en, this message translates to:
+  /// **'Search man Page Index for Selection'**
+  String get searchManIndex;
 }
 
 class _AppLocalizationsDelegate

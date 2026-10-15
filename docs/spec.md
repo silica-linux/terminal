@@ -47,8 +47,40 @@ Output is decoded as a UTF-8 stream (a character split between two messages arri
 | `terminal.copy` | ⌘C, ⌃⇧C | copies the selection |
 | `terminal.paste` | ⌘V, ⌃⇧V | pastes (bracketed when the program asks for it) |
 | `terminal.select_all` | ⌘A | selects the scrollback and the screen |
+| `terminal.find_next` | ⌘G | the next match (while the find bar is open) |
+| `terminal.find_previous` | ⇧⌘G | the previous match |
+| `terminal.hide_find` | ⇧⌘F | closes the find bar |
+| `terminal.use_selection_for_find` | ⌘E | the selected text becomes the query and the find bar opens |
+| `terminal.scroll_top` / `terminal.scroll_bottom` | ⌘↖ / ⌘↘ | scroll to the start of the scrollback / to the end |
+| `terminal.page_up` / `terminal.page_down` | ⌘⇞ / ⌘⇟ | scroll one page |
+| `terminal.line_up` / `terminal.line_down` | ⌥⌘⇞ / ⌥⌘⇟ | scroll one line |
 
-⌘ is the Logo key. Plain ⌃C and ⌃V go to the program.
+⌘ is the Logo key. Plain ⌃C and ⌃V go to the program. The ⌘ shortcuts are the menu bar's
+(`SilicaMenuBar`; the grid runs them too, because it takes keys before the window does); ⌃⇥ and
+⌃⇧⇥ switch tabs and ⌃⇧C / ⌃⇧V copy and paste in addition.
+
+## Menus
+
+Published to Silica's menu bar (silica-ui `SilicaMenuBar`, silica-desktop#25), as measured in
+TE-01:
+
+- **Terminal** (app menu): Secure Keyboard Entry (disabled), Services, Hide, Hide Others, Show
+  All and Quit from the system. No About or Settings… yet (the app has neither).
+- **Shell**: New Tab › New Tab with Profile - Basic ⌘T, with Same Command ⌃⌘T, Basic (all open
+  a tab: Terminal has the one profile and every tab runs the same command); Close Tab / Close
+  Window ⌘W (asks before ending a running program). New Window, New Command, New Remote
+  Connection, Open, Close All, settings and text export, inspector, title and background,
+  Reset, Hard Reset and printing are shown disabled.
+- **Edit**: Copy ⌘C (only with a selection), Paste ⌘V, Select All ⌘A; Find › Find… ⌘F, Find
+  Next ⌘G, Find Previous ⇧⌘G (with matches), Hide Find Bar ⇧⌘F, Use Selection for Find ⌘E (with
+  a selection). Undo, Redo, Cut, Copy Special, Paste Escaped Text, Paste Selection, marks,
+  bookmarks, navigation, clearing, Show Colors, Option as Meta and Num Lock are disabled.
+- **View**: Scroll to Top / Bottom, Page Up / Down, Line Up / Down, Full Screen from the
+  system. Tab list and tab bar, alternate screen, mouse reporting (checked), split pane and font
+  size are disabled.
+- **Window**: Show Previous / Next Tab (from two tabs), then the system part of the bar. Move Tab
+  to New Window, Merge All Windows and the window groups are disabled.
+- **Help**: Silica Help from the bar; the man page items are disabled.
 
 ## Pseudo-terminal channel
 
