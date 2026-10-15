@@ -31,6 +31,14 @@ class AppLocalizationsIt extends AppLocalizations {
       'Chiudendo questo pannello verranno terminati i processi in esecuzione.';
 
   @override
+  String get closeWindowConfirmTitle =>
+      'Vuoi terminare i processi in esecuzione in questa finestra?';
+
+  @override
+  String get closeWindowConfirmMessage =>
+      'Chiudendo questa finestra verranno terminati i processi in esecuzione.';
+
+  @override
   String get terminate => 'Termina';
 
   @override

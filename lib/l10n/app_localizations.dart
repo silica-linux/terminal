@@ -134,6 +134,18 @@ abstract class AppLocalizations {
   /// **'Closing this tab will terminate the running processes in it.'**
   String get closeTabConfirmMessage;
 
+  /// Title of the alert shown when closing a window with a tab whose shell runs another program.
+  ///
+  /// In en, this message translates to:
+  /// **'Do you want to terminate running processes in this window?'**
+  String get closeWindowConfirmTitle;
+
+  /// Message of that alert.
+  ///
+  /// In en, this message translates to:
+  /// **'Closing this window will terminate the running processes in it.'**
+  String get closeWindowConfirmMessage;
+
   /// Destructive button of that alert.
   ///
   /// In en, this message translates to:

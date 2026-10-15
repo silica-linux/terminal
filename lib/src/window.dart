@@ -95,6 +95,9 @@ class TerminalWindowState extends State<TerminalWindow>
 
   /// The tab waiting for the answer of the "terminate running processes?" alert.
   TerminalSession? _confirming;
+
+  /// The answer to the same alert asked for the whole window (its close button, Logo+W).
+  Completer<bool>? _confirmingWindow;
   SearchHighlights? _highlights;
 
   bool _windowActive = _isActive(WidgetsBinding.instance.lifecycleState);
@@ -124,11 +127,15 @@ class TerminalWindowState extends State<TerminalWindow>
   void initState() {
     super.initState();
     _lifecycle;
+    SilicaWindows.onMainCloseRequested = requestCloseWindow;
     newTab();
   }
 
   @override
   void dispose() {
+    if (SilicaWindows.onMainCloseRequested == requestCloseWindow) {
+      SilicaWindows.onMainCloseRequested = null;
+    }
     _lifecycle.dispose();
     _highlights?.clear();
     for (final tab in _tabs) {
@@ -213,7 +220,8 @@ class TerminalWindowState extends State<TerminalWindow>
   /// first ("Do you want to terminate running processes in this tab?").
   Future<void> requestCloseTab([int? index]) async {
     final i = index ?? _current;
-    if (i < 0 || i >= _tabs.length || _confirming != null) return;
+    if (i < 0 || i >= _tabs.length) return;
+    if (_confirming != null || _confirmingWindow != null) return;
     final session = _tabs[i];
     if (await session.hasForegroundProcess()) {
       if (!mounted || !_tabs.contains(session)) return;
@@ -223,7 +231,32 @@ class TerminalWindowState extends State<TerminalWindow>
     if (mounted && _tabs.contains(session)) closeTab(_tabs.indexOf(session));
   }
 
+  /// The window is closing (the close button, Logo+W): true to let it close. When a program
+  /// other than the shell runs in any tab, asks first ("Do you want to terminate running
+  /// processes in this window?") and keeps the window open if the answer is no.
+  Future<bool> requestCloseWindow() async {
+    if (_confirming != null || _confirmingWindow != null) return false;
+    var running = false;
+    for (final tab in List.of(_tabs)) {
+      if (await tab.hasForegroundProcess()) {
+        running = true;
+        break;
+      }
+    }
+    if (!running || !mounted) return true;
+    final answer = Completer<bool>();
+    setState(() => _confirmingWindow = answer);
+    return answer.future;
+  }
+
   void _answerClose(bool terminate) {
+    final window = _confirmingWindow;
+    if (window != null) {
+      setState(() => _confirmingWindow = null);
+      window.complete(terminate);
+      if (!terminate && !_finding) _gridFocus.requestFocus();
+      return;
+    }
     final session = _confirming;
     setState(() => _confirming = null);
     if (terminate && session != null && _tabs.contains(session)) {
@@ -240,8 +273,12 @@ class TerminalWindowState extends State<TerminalWindow>
         child: SilicaAlert(
           opaque: true,
           sideBySide: true,
-          title: l10n.closeTabConfirmTitle,
-          message: l10n.closeTabConfirmMessage,
+          title: _confirmingWindow != null
+              ? l10n.closeWindowConfirmTitle
+              : l10n.closeTabConfirmTitle,
+          message: _confirmingWindow != null
+              ? l10n.closeWindowConfirmMessage
+              : l10n.closeTabConfirmMessage,
           buttons: [
             AlertButton(
               l10n.cancel,
@@ -417,7 +454,7 @@ class TerminalWindowState extends State<TerminalWindow>
     );
     return SilicaMenuBar(
       menus: menus(AppLocalizations.of(context)),
-      child: _confirming == null
+      child: _confirming == null && _confirmingWindow == null
           ? content
           : Stack(fit: StackFit.expand, children: [content, _confirmOverlay()]),
     );

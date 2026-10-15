@@ -31,6 +31,14 @@ class AppLocalizationsEn extends AppLocalizations {
       'Closing this tab will terminate the running processes in it.';
 
   @override
+  String get closeWindowConfirmTitle =>
+      'Do you want to terminate running processes in this window?';
+
+  @override
+  String get closeWindowConfirmMessage =>
+      'Closing this window will terminate the running processes in it.';
+
+  @override
   String get terminate => 'Terminate';
 
   @override

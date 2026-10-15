@@ -2,6 +2,7 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:silica_ui/silica_ui.dart';
 import 'package:terminal/src/l10n.dart';
 import 'package:terminal/src/pty.dart';
 import 'package:terminal/src/style.dart';
@@ -303,6 +304,43 @@ void main() {
     await tester.tap(find.text('Terminate'));
     await tester.pump();
     expect(window.tabs, isEmpty);
+  });
+
+  testWidgets('closing the window with nothing running is not asked', (
+    tester,
+  ) async {
+    await pump(tester);
+    expect(
+      await SilicaWindows.handle('closeRequested', {'viewId': 0}),
+      isFalse, // the embedder closes it
+    );
+    expect(find.byKey(const ValueKey('close confirmation')), findsNothing);
+  });
+
+  testWidgets('closing the window with a process running asks first', (
+    tester,
+  ) async {
+    final (pty, window) = await pump(tester);
+    pty.busy.add(1);
+    final closing = SilicaWindows.handle('closeRequested', {'viewId': 0});
+    await tester.pump();
+    await tester.pump();
+    expect(
+      find.text('Do you want to terminate running processes in this window?'),
+      findsOneWidget,
+    );
+    await tester.tap(find.text('Cancel'));
+    await tester.pump();
+    expect(await closing, isTrue); // kept open
+    expect(window.tabs, hasLength(1));
+    expect(find.byKey(const ValueKey('close confirmation')), findsNothing);
+
+    final again = SilicaWindows.handle('closeRequested', {'viewId': 0});
+    await tester.pump();
+    await tester.pump();
+    await tester.tap(find.text('Terminate'));
+    await tester.pump();
+    expect(await again, isFalse); // the embedder closes the window
   });
 
   testWidgets('find: ⌘F, matches counted, Esc closes', (tester) async {

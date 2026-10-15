@@ -6,6 +6,8 @@
   "closeTab": "Chiudi pannello",
   "closeTabConfirmTitle": "Vuoi terminare i processi in esecuzione in questo pannello?",
   "closeTabConfirmMessage": "Chiudendo questo pannello verranno terminati i processi in esecuzione.",
+  "closeWindowConfirmTitle": "Vuoi terminare i processi in esecuzione in questa finestra?",
+  "closeWindowConfirmMessage": "Chiudendo questa finestra verranno terminati i processi in esecuzione.",
   "terminate": "Termina",
   "cancel": "Annulla",
   "noPty": "Il terminale ha bisogno della scrivania di Silica: qui il suo servizio di pseudo-terminale non c'è.",
