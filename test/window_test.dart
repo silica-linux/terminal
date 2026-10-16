@@ -435,7 +435,8 @@ void main() {
     );
     await gesture.moveBy(const Offset(40, 0));
     await gesture.up();
-    await tester.pump();
+    // Let the double-tap timer of the title band expire before the tree is disposed.
+    await tester.pump(const Duration(seconds: 1));
     expect(calls, contains('startMove'));
   });
   testWidgets('the title is centred between the window controls', (
