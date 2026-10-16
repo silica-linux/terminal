@@ -245,7 +245,7 @@ void main() {
     expect(position.pixels, closeTo(position.viewportDimension, 1));
     choose(item('View', 'Line Down'));
     await tester.pump();
-    expect(position.pixels, closeTo(position.viewportDimension + 14, 1));
+    expect(position.pixels, closeTo(position.viewportDimension + 16, 1));
     choose(item('View', 'Scroll to Bottom'));
     await tester.pump();
     expect(position.pixels, position.maxScrollExtent);

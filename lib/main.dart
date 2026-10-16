@@ -40,7 +40,9 @@ void main(List<String> args) {
   // SILICA_TERMINAL_ENGINE=grid: the embedder emulates the terminal and the app only paints
   // the rows (experimental; measured against the default xterm.dart path).
   if (env['SILICA_TERMINAL_ENGINE'] == 'grid') {
-    final colors = lightProfile.grid;
+    final colors = Profile.of(
+      const AmalfiThemeData(brightness: Brightness.light, app: 'Terminal'),
+    ).grid;
     runApp(
       Directionality(
         textDirection: TextDirection.ltr,
@@ -76,15 +78,19 @@ void main(List<String> args) {
     AppLocalizationsScope(
       child: Directionality(
         textDirection: TextDirection.ltr,
-        // Closing the last window keeps Terminal running; a reopen (the Dock, the Launcher)
-        // opens a new window with a new shell (APP-LC).
-        child: SilicaAppWindow(
-          builder: (context) => TerminalWindow(
-            pty: SilicaPty(),
-            command: command,
-            cwd: env['HOME'],
-            shellName: shellName,
-            onLastTabClosed: () => SilicaApp.closeWindow(),
+        // The app palette `App/Terminal`; the appearance follows the system's.
+        child: AmalfiTheme(
+          app: 'Terminal',
+          // Closing the last window keeps Terminal running; a reopen (the Dock, the Launcher)
+          // opens a new window with a new shell (APP-LC).
+          child: SilicaAppWindow(
+            builder: (context) => TerminalWindow(
+              pty: SilicaPty(),
+              command: command,
+              cwd: env['HOME'],
+              shellName: shellName,
+              onLastTabClosed: () => SilicaApp.closeWindow(),
+            ),
           ),
         ),
       ),

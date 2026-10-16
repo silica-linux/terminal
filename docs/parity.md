@@ -52,3 +52,19 @@ Parity with the reference is written here only from measurements: TE-01, `plan/r
  , ⌘1–⌘9, marks and bookmarks, ⌘K.
 - **Dark captures** of tabs, find bar and Inspector are missing in the reference: their dark colours are estimates.
 - **Live check:** not run; the values are held by the tests only.
+
+## Amalfi (1.0.0, M6)
+
+The chrome and colours follow the Amalfi kit page `App · Terminal` (silica-design); the measured
+rows above remain the behaviour reference (keys, find, tab animation timings ~550 / ~500 ms),
+but where a measure differs the kit wins:
+
+| Part | Amalfi |
+|---|---|
+| Window | `AmalfiWindow`, 640 × 476 default (24 rows), corner 18, shadow left to the compositor |
+| Title band | 32 pt, centred headline, 84 pt kept clear each side; window controls are the compositor's |
+| Tab bar | 36 pt (last point `Line/Separator`); `AmalfiTab` 28 pt at x +8, y +4, 4 pt apart; round 28 pt new-tab button 8 pt from the right |
+| Grid | JetBrains Mono 12 / 16 (cell 7.2 × 16), padding 12, overlay `AmalfiScrollbar` |
+| Find bar | 32 pt: `AmalfiSearchField` small (480 wide at 640) at x +8, previous/next `AmalfiActionSegments` 56 × 24, "Done" `AmalfiPushButton` small; the match count sits before the segments and shrinks the field (not in the kit) |
+| Colours | grid on `Surface/Window` under `Text/Primary`; selection, cursor, find match and ANSI from `App/Terminal` |
+| Not drawn | split view (issue #14); the kit draws no settings window |

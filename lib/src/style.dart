@@ -3,71 +3,68 @@
 // Values not measured are marked "estimated"; docs/parity.md lists both.
 
 import 'package:flutter/widgets.dart';
+import 'package:silica_ui/silica_ui.dart';
 import 'package:xterm/xterm.dart';
 
-/// The title band at the top: Ossido puts the window buttons in it (AX 16 × 16 at y +8).
+/// The title band at the top (kit `Titlebars/Bar/Title Only`, 32 pt): the compositor draws the
+/// window controls in it, the app the centred title.
 const double titleBarHeight = 32;
 
-/// The tab bar under the title band: always visible, even with one tab (AX 28 pt at y +32).
-const double tabBarHeight = 28;
+/// The tab bar under the title band: always visible, even with one tab (kit `Apps/Terminal/Tab
+/// Bar *`: 36 pt, the last point is the `Line/Separator`).
+const double tabBarHeight = 36;
 
-/// The title (titlebar.md, TITLEBAR-GLASS): left-aligned; the 18 × 18 proxy icon at (+81, +6),
-/// the text from x +100, 10 pt kept from the right edge (ellipsis).
-const double titleIconLeft = 81;
-const double titleIconTop = 6;
-const double titleIconSide = 18;
-const double titleTextLeft = 100;
-const double titleRightInset = 10;
+/// The title is kept clear of the window controls on both sides (`AmalfiTitleBar.titleOnlyInset`).
+const double titleInset = 84;
 
-/// The selected tab keeps at least this width while the others shrink.
+/// Tabs are 28 pt tall (`AmalfiTabMetrics.height`) at y +4, from x +8, 4 pt apart; the
+/// selected tab keeps at least this width while the others shrink.
 const double selectedTabMinWidth = 120;
+const double tabHeight = 28;
+const double tabTop = 4;
+const double tabBarLeft = 8;
+const double tabGap = 4;
 
-/// A tab: a capsule 24 pt tall, 2 pt below the top of the bar, starting at x +10.
-const double tabHeight = 24;
-const double tabTop = 2;
+/// The new-tab button: a round 28 pt icon button, 8 pt from the right edge, at y +4.
+const double newTabSide = 28;
+const double newTabRight = 8;
+const double newTabTop = 4;
 
-/// The × of a hovered tab: 18 × 18, 4 pt from the tab's left edge.
-const double tabCloseSide = 18;
-const double tabCloseLeft = 4;
-const double tabBarLeft = 10;
-
-/// The new-tab button: a 30 × 30 circle at (+560, +31) in an 80-column window, so its right
-/// edge is 7 pt from the window's.
-const double newTabSide = 30;
-const double newTabRight = 7;
-const double newTabTop = -1;
+/// The tabs end 8 pt before the new-tab button (kit: x +596 against +604 in a 640 window).
+const double tabsToNewTab = 8;
 
 /// A new tab slides in from the right and settles in ~550 ms; a closed one shrinks away in
-/// ~500 ms.
+/// ~500 ms (measured, TE-01).
 const Duration tabEnter = Duration(milliseconds: 550);
 const Duration tabExit = Duration(milliseconds: 500);
 
-/// The content area starts at window y +68 (title band + tab bar), under a 1 pt separator.
-const double chromeHeight = titleBarHeight + tabBarHeight + 8;
+/// The content area starts at window y +68 (title band + tab bar).
+const double chromeHeight = titleBarHeight + tabBarHeight;
 
-/// Text insets around the character grid: left 10, top 7, bottom 10; right 27 = 8 + the
-/// 19 pt scroller column.
-const EdgeInsets gridPadding = EdgeInsets.fromLTRB(10, 7, 27, 10);
+/// Content padding 12 on every side (`components.md`); the scroll bar floats over it.
+const EdgeInsets gridPadding = EdgeInsets.all(12);
 
-/// The scroller column at the right of the grid and its knob.
-const double scrollerWidth = 19;
-const double scrollerKnobWidth = 11;
-
-/// The find bar, inserted under the tab bar: 32 pt; the window grows by as much.
+/// The find bar, inserted under the tab bar: 32 pt; the window grows by as much. Kit `Apps/
+/// Terminal/Find Bar`: search field (small, 24) at x +8, previous/next segments 56 × 24 and
+/// "Done" 56 × 24 ending 4 pt before the right edge, bottom separator.
 const double findBarHeight = 32;
-const Size findFieldSize = Size(482, 22);
-const double findFieldLeft = 7;
+const double findFieldLeft = 8;
+const double findFieldWidth = 480;
+const double findControlHeight = 24;
+const double findSegmentsWidth = 56;
+const double findDoneWidth = 56;
+const double findRight = 4;
 
-/// A cell is 7 × 14 pt. The bundled JetBrains Mono NL advances 0.6 em, so 7 pt needs
-/// 7 / 0.6 = 11.667 pt; a line height of 14 pt is 1.2 em. Residual against 7 × 14: < 0.01 pt.
-const Size cellSize = Size(7, 14);
-const double terminalFontSize = 7 / 0.6;
+/// A cell is 7.2 × 16 pt: JetBrains Mono 12 / 16 (`components.md`, Mono token); the bundled
+/// JetBrains Mono NL advances 0.6 em.
+const Size cellSize = Size(7.2, 16);
+const double terminalFontSize = 12;
 
 /// The terminal font: JetBrains Mono NL (OFL 1.1, bundled).
 const TerminalStyle terminalStyle = TerminalStyle(
   fontFamily: 'JetBrains Mono',
   fontSize: terminalFontSize,
-  height: 14 / terminalFontSize,
+  height: 16 / terminalFontSize,
   fontFamilyFallback: ['Noto Sans Mono', 'DejaVu Sans Mono', 'monospace'],
 );
 
@@ -106,21 +103,19 @@ List<double> tabWidths({
   ];
 }
 
-/// The window width for `columns`: 10 + 7 · columns + 27 (80 → 597).
+/// The window width for `columns`: 12 + 7.2 · columns + 12.
 double windowWidth(int columns) =>
-    gridPadding.left + cellSize.width * columns + gridPadding.right;
+    gridPadding.horizontal + cellSize.width * columns;
 
-/// The window height for `rows`: 68 + 7 + 14 · rows + 10 (24 → 421).
+/// The window height for `rows`: 68 + 12 + 16 · rows + 12 (24 → 476).
 double windowHeight(int rows, {bool findBar = false}) =>
     chromeHeight +
-    gridPadding.top +
+    gridPadding.vertical +
     cellSize.height * rows +
-    gridPadding.bottom +
     (findBar ? findBarHeight : 0);
 
-/// The default window size: 597 × 421.
-Size get defaultWindowSize =>
-    Size(windowWidth(defaultColumns), windowHeight(defaultRows));
+/// The default window size: 640 × 476, as the kit's masters.
+Size get defaultWindowSize => Size(640, windowHeight(defaultRows));
 
 /// The smallest window size.
 Size get minimumWindowSize => Size(
@@ -300,102 +295,53 @@ final Map<String, GridColors> extraProfiles = {
   ),
 };
 
-/// The default profile and the window chrome around it, for one appearance.
+/// The grey of a selection in an inactive window.
+// Assumption: not measured on the Amalfi palette; the measured greys of TE-01.
+const Color inactiveSelectionLight = Color(0xFFE3E3E3);
+const Color inactiveSelectionDark = Color(0xFF777777);
+
+/// The grid colours for an appearance: the window surface under `Text/Primary`, the
+/// `App/Terminal` palette for selection, cursor and find matches.
 @immutable
 class Profile {
   const Profile({
     required this.grid,
     required this.inactiveSelection,
-    required this.chrome,
-    required this.title,
-    required this.titleInactive,
-    required this.tabTrack,
-    required this.tabActive,
-    required this.tabText,
-    required this.tabTextInactive,
-    required this.separator,
-    required this.scrollerKnob,
-    required this.scrollerTrack,
-    required this.findRing,
+    required this.findMatch,
   });
+
+  factory Profile.of(AmalfiThemeData theme) {
+    final colors = theme.colors;
+    final palette = colors.terminal;
+    return Profile(
+      grid: GridColors(
+        background: colors.surfaceWindow,
+        foreground: colors.textPrimary,
+        bold: colors.textPrimary,
+        selection: palette.selection,
+        cursor: palette.cursor,
+      ),
+      inactiveSelection: theme.isDark
+          ? inactiveSelectionDark
+          : inactiveSelectionLight,
+      findMatch: palette.findMatch,
+    );
+  }
 
   final GridColors grid;
 
   /// The selection in an inactive window: grey.
   final Color inactiveSelection;
-  final Color chrome;
-  final Color title;
-  final Color titleInactive;
-  final Color tabTrack;
-  final Color tabActive;
-  final Color tabText;
-  final Color tabTextInactive;
 
-  /// The line under the tab bar.
-  final Color separator;
-  final Color scrollerKnob;
-  final Color? scrollerTrack;
-  final Color findRing;
+  /// `App/Terminal/Find Match`.
+  final Color findMatch;
 
   /// The grid theme for an active or inactive window.
-  TerminalTheme theme({required bool active}) =>
-      grid.theme(selection: active ? grid.selection : inactiveSelection);
+  TerminalTheme theme({required bool active}) => grid.theme(
+    selection: active ? grid.selection : inactiveSelection,
+    searchHit: findMatch,
+  );
 }
 
-/// Light: background `#ffffff`, text `#000000`, selection `#b3d7ff` (inactive `#e3e3e3`),
-/// cursor `#9d9d9d`; title bar `#ffffff`, title `#595959`, tab track `#e8e8e8`, selected tab
-/// `#fefdfe`, separator `#e5e5e5`, scroller knob `#7a7a7a`, find ring `#87a4ee`–`#91aef8`.
-const Profile lightProfile = Profile(
-  grid: GridColors(
-    background: Color(0xFFFFFFFF),
-    foreground: Color(0xFF000000),
-    bold: Color(0xFF000000),
-    selection: Color(0xFFB3D7FF),
-    cursor: Color(0xFF9D9D9D),
-  ),
-  inactiveSelection: Color(0xFFE3E3E3),
-  chrome: Color(0xFFFFFFFF),
-  title: Color(0xFF595959),
-  // Estimated: the inactive title was not measured; the toolbar's inactive title grey.
-  titleInactive: Color(0xFFBEBEBE),
-  tabTrack: Color(0xFFE8E8E8),
-  tabActive: Color(0xFFFEFDFE),
-  tabText: Color(0xFF4C4B4C),
-  tabTextInactive: Color(0xFF828282),
-  separator: Color(0xFFE5E5E5),
-  scrollerKnob: Color(0xFF7A7A7A),
-  scrollerTrack: null,
-  findRing: Color(0xFF8CA9F3),
-);
-
-/// Dark: background `#1e1e1e`, text `#ffffff`, selection `#3e638b` (inactive `#777777`),
-/// cursor `#9d9d9d`; title bar `#2f2f2f`, title `#a1a1a1`, tab track `#464646`, separator
-/// `#2e2e2e`, scroller knob `#a2a2a2` on `#272728`. The selected tab and the tab texts in dark
-/// were not captured: estimated from the dark tab bar of the file manager (MU-01).
-const Profile darkProfile = Profile(
-  grid: GridColors(
-    background: Color(0xFF1E1E1E),
-    foreground: Color(0xFFFFFFFF),
-    bold: Color(0xFFFFFFFF),
-    selection: Color(0xFF3E638B),
-    cursor: Color(0xFF9D9D9D),
-  ),
-  inactiveSelection: Color(0xFF777777),
-  chrome: Color(0xFF2F2F2F),
-  title: Color(0xFFA1A1A1),
-  titleInactive: Color(0xFF646464),
-  tabTrack: Color(0xFF464646),
-  tabActive: Color(0xFF5A5A5B),
-  tabText: Color(0xFFECECEC),
-  tabTextInactive: Color(0xFF8B8B8C),
-  separator: Color(0xFF2E2E2E),
-  scrollerKnob: Color(0xFFA2A2A2),
-  scrollerTrack: Color(0xFF272728),
-  findRing: Color(0xFF3A6996),
-);
-
-/// The profile for the system appearance.
-Profile profileOf(BuildContext context) =>
-    MediaQuery.maybePlatformBrightnessOf(context) == Brightness.dark
-    ? darkProfile
-    : lightProfile;
+/// The profile for the appearance in effect.
+Profile profileOf(BuildContext context) => Profile.of(AmalfiTheme.of(context));

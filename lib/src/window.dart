@@ -1,6 +1,7 @@
-// The Terminal window (TE-01, terminal.md): the 32 pt title band (the window buttons of Ossido
-// sit in it, the empty band moves the window), the 28 pt tab bar always visible, the 32 pt find
-// bar that grows the window, and the character grid with its scroller column.
+// The Terminal window on the Amalfi kit (`App · Terminal`): the 32 pt title band (the window
+// controls sit in it, the empty band moves the window), the 36 pt tab bar always visible, the
+// 32 pt find bar that grows the window, and the character grid in a 12 pt padding with an
+// overlay scroll bar.
 //
 // Commands (docs/spec.md) are the items of the menus published to Silica's menu bar (menus()):
 // terminal.new_tab ⌘T, terminal.close_tab ⌘W, terminal.next_tab ⌃⇥, terminal.previous_tab ⌃⇧⇥,
@@ -74,7 +75,6 @@ class _TabSlot {
   final TerminalSession session;
   final AnimationController presence;
   bool closing = false;
-  bool hover = false;
 }
 
 class TerminalWindowState extends State<TerminalWindow>
@@ -88,7 +88,7 @@ class TerminalWindowState extends State<TerminalWindow>
 
   bool _finding = false;
   final TextEditingController _query = TextEditingController();
-  final FocusNode _queryFocus = FocusNode();
+  late final FocusNode _queryFocus = FocusNode(onKeyEvent: _findKey);
   final FocusNode _gridFocus = FocusNode();
   List<SearchMatch> _matches = const [];
   int _match = 0;
@@ -268,26 +268,24 @@ class TerminalWindowState extends State<TerminalWindow>
   Widget _confirmOverlay() => Positioned.fill(
     key: const ValueKey('close confirmation'),
     child: ColoredBox(
-      color: const Color(0x33000000), // provisional
+      // Assumption: not measured (the kit draws no scrim behind an app's alert).
+      color: const Color(0x33000000),
       child: Center(
-        child: SilicaAlert(
-          opaque: true,
-          sideBySide: true,
+        child: AmalfiAlert(
           title: _confirmingWindow != null
               ? l10n.closeWindowConfirmTitle
               : l10n.closeTabConfirmTitle,
           message: _confirmingWindow != null
               ? l10n.closeWindowConfirmMessage
               : l10n.closeTabConfirmMessage,
-          buttons: [
-            AlertButton(
-              l10n.cancel,
-              role: AlertRole.cancel,
+          actions: [
+            AmalfiPushButton(
+              label: l10n.cancel,
               onPressed: () => _answerClose(false),
             ),
-            AlertButton(
-              l10n.terminate,
-              role: AlertRole.destructive,
+            AmalfiPushButton(
+              label: l10n.terminate,
+              variant: AmalfiPushButtonVariant.destructive,
               onPressed: () => _answerClose(true),
             ),
           ],
@@ -386,8 +384,9 @@ class TerminalWindowState extends State<TerminalWindow>
   @override
   Widget build(BuildContext context) {
     final profile = profileOf(context);
+    final colors = AmalfiTheme.of(context).colors;
     if (_tabs.isEmpty) {
-      return ColoredBox(color: profile.grid.background);
+      return ColoredBox(color: colors.surfaceWindow);
     }
     final s = session;
     final content = Actions(
@@ -398,35 +397,19 @@ class TerminalWindowState extends State<TerminalWindow>
       },
       child: Shortcuts(
         shortcuts: windowShortcuts,
-        child: ColoredBox(
-          color: profile.grid.background,
+        child: AmalfiWindow(
+          // The compositor draws the window shadow.
+          shadow: false,
+          active: _windowActive,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              _titleBand(profile),
-              _tabBar(profile),
-              // Down to y 68, where the content starts under a 1 pt line.
-              Container(
-                height: chromeHeight - titleBarHeight - tabBarHeight,
-                decoration: BoxDecoration(
-                  color: profile.chrome,
-                  border: Border(bottom: BorderSide(color: profile.separator)),
-                ),
-              ),
-              if (_finding) _findBar(profile),
+              _titleBand(colors),
+              _tabBar(colors),
+              if (_finding) _findBar(colors, profile),
               Expanded(
-                // The scroller column (19 pt, knob 11) sits in the right inset of the grid.
-                child: RawScrollbar(
+                child: AmalfiScrollbar(
                   key: const ValueKey('scroller'),
-                  controller: _scroll,
-                  thumbVisibility: true,
-                  trackVisibility: profile.scrollerTrack != null,
-                  thickness: scrollerKnobWidth,
-                  radius: const Radius.circular(scrollerKnobWidth / 2),
-                  thumbColor: profile.scrollerKnob,
-                  trackColor: profile.scrollerTrack,
-                  trackBorderColor: const Color(0x00000000),
-                  crossAxisMargin: (scrollerWidth - scrollerKnobWidth) / 2,
                   child: TerminalView(
                     s.terminal,
                     key: ObjectKey(s),
@@ -441,9 +424,7 @@ class TerminalWindowState extends State<TerminalWindow>
                     cursorType: TerminalCursorType.block,
                     shortcuts: {...gridShortcuts, ...windowShortcuts},
                     hardwareKeyboardOnly: true,
-                    keyboardAppearance:
-                        MediaQuery.maybePlatformBrightnessOf(context) ??
-                        Brightness.light,
+                    keyboardAppearance: AmalfiTheme.of(context).brightness,
                   ),
                 ),
               ),
@@ -953,40 +934,29 @@ class TerminalWindowState extends State<TerminalWindow>
     ];
   }
 
-  Widget _titleBand(Profile profile) => WindowDragArea(
-    child: Container(
+  /// The title band: the centred title (headline); the window controls are the compositor's.
+  Widget _titleBand(AmalfiColors colors) => WindowDragArea(
+    child: SizedBox(
       key: const ValueKey('title band'),
       height: titleBarHeight,
-      color: profile.chrome,
-      // The title starts after the window buttons and the proxy icon (AX x +100, y +8); bold
-      // ~13 pt, `#595959` / `#a1a1a1`.
       child: Stack(
         children: [
           Positioned(
-            left: titleIconLeft,
-            top: titleIconTop,
-            width: titleIconSide,
-            height: titleIconSide,
-            child: CustomPaint(
-              key: const ValueKey('title icon'),
-              painter: _DocumentIconPainter(
-                _windowActive ? profile.title : profile.titleInactive,
-              ),
-            ),
-          ),
-          Positioned(
-            left: titleTextLeft,
-            right: titleRightInset,
-            top: 8,
+            left: titleInset,
+            right: titleInset,
+            top:
+                (titleBarHeight - (AmalfiType.headlineToken.lineHeight ?? 18)) /
+                2,
             child: Text(
               _title,
               key: const ValueKey('title'),
               maxLines: 1,
+              softWrap: false,
               overflow: TextOverflow.ellipsis,
-              style: uiText(
-                size: 13,
-                color: _windowActive ? profile.title : profile.titleInactive,
-              ).copyWith(fontWeight: FontWeight.w600, height: 16 / 13),
+              textAlign: TextAlign.center,
+              style: AmalfiType.headline(
+                color: _windowActive ? colors.textPrimary : colors.textTertiary,
+              ),
             ),
           ),
         ],
@@ -994,61 +964,23 @@ class TerminalWindowState extends State<TerminalWindow>
     ),
   );
 
-  /// The tab label: the path in grey, the process in bold ("~/src — vim").
-  Widget _tabLabel(TerminalSession session, Profile profile, bool selected) {
-    final title = session.title;
-    final dash = title.lastIndexOf(' — ');
-    final color = selected ? profile.tabText : profile.tabTextInactive;
-    final base = uiText(size: 12, color: color);
-    return Text.rich(
-      dash < 0
-          ? TextSpan(
-              text: title,
-              style: base.copyWith(fontWeight: FontWeight.w600),
-            )
-          : TextSpan(
-              children: [
-                TextSpan(
-                  text: title.substring(0, dash + 3),
-                  style: base.copyWith(color: profile.tabTextInactive),
-                ),
-                TextSpan(
-                  text: title.substring(dash + 3),
-                  style: base.copyWith(fontWeight: FontWeight.w600),
-                ),
-              ],
-            ),
-      maxLines: 1,
-      overflow: TextOverflow.ellipsis,
-      textAlign: TextAlign.center,
-    );
-  }
-
-  /// The tab bar: always visible, 28 pt; capsule tabs 24 pt from x +10 sharing the width, the
-  /// 30 pt "+" circle 7 pt from the right edge.
-  Widget _tabBar(Profile profile) => Container(
+  /// The tab bar (kit `Apps/Terminal/Tab Bar *`): 36 pt, tabs 28 pt from x +8 sharing the
+  /// width, the round 28 pt "+" 8 pt from the right edge, the separator on the last point.
+  Widget _tabBar(AmalfiColors colors) => SizedBox(
     key: const ValueKey('tab bar'),
     height: tabBarHeight,
-    color: profile.chrome,
     child: Stack(
       clipBehavior: Clip.none,
       children: [
         Positioned(
           left: tabBarLeft,
-          right: newTabRight + newTabSide + 5,
+          right: newTabRight + newTabSide + tabsToNewTab - tabGap,
           top: tabTop,
           height: tabHeight,
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              color: profile.tabTrack,
-              borderRadius: BorderRadius.circular(tabHeight / 2),
-            ),
-            child: AnimatedBuilder(
-              animation: Listenable.merge([for (final s in _slots) s.presence]),
-              builder: (context, _) => LayoutBuilder(
-                builder: (context, box) => _tabRow(profile, box.maxWidth),
-              ),
-            ),
+          child: AnimatedBuilder(
+            animation: Listenable.merge([for (final s in _slots) s.presence]),
+            builder: (context, _) =>
+                LayoutBuilder(builder: (context, box) => _tabRow(box.maxWidth)),
           ),
         ),
         Positioned(
@@ -1056,33 +988,25 @@ class TerminalWindowState extends State<TerminalWindow>
           top: newTabTop,
           width: newTabSide,
           height: newTabSide,
-          child: GestureDetector(
+          child: AmalfiIconButton(
             key: const ValueKey('new tab'),
-            behavior: HitTestBehavior.opaque,
-            onTap: newTab,
-            child: Semantics(
-              label: l10n.newTab,
-              button: true,
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  color: profile.tabTrack,
-                  shape: BoxShape.circle,
-                ),
-                child: Center(
-                  child: Text(
-                    '+',
-                    style: uiText(size: 18, color: profile.tabText),
-                  ),
-                ),
-              ),
-            ),
+            icon: const AmalfiGlyph(AmalfiGlyphs.plus),
+            onPressed: newTab,
+            semanticLabel: l10n.newTab,
           ),
+        ),
+        Positioned(
+          left: 0,
+          right: 0,
+          bottom: 0,
+          height: 1,
+          child: ColoredBox(color: colors.lineSeparator),
         ),
       ],
     ),
   );
 
-  Widget _tabRow(Profile profile, double width) {
+  Widget _tabRow(double width) {
     const curve = Curves.easeOutCubic;
     final weights = [
       for (final slot in _slots) curve.transform(slot.presence.value),
@@ -1100,289 +1024,145 @@ class TerminalWindowState extends State<TerminalWindow>
     return Row(
       children: [
         for (var i = 0; i < _slots.length; i++)
-          SizedBox(width: widths[i], child: _tab(profile, _slots[i])),
+          SizedBox(width: widths[i], child: _tab(_slots[i])),
       ],
     );
   }
 
-  Widget _tab(Profile profile, _TabSlot slot) {
+  /// One tab (`AmalfiTab`: the selected one raised, the × on the selected and the hovered
+  /// one), [tabGap] kept at its trailing side.
+  Widget _tab(_TabSlot slot) {
     final index = _tabs.indexOf(slot.session);
     final selected = index == _current && !slot.closing;
-    final canClose = index >= 0 && !slot.closing;
-    return MouseRegion(
-      onEnter: (_) => setState(() => slot.hover = true),
-      onExit: (_) => setState(() => slot.hover = false),
-      child: GestureDetector(
-        key: index < 0 ? null : ValueKey('tab $index'),
-        behavior: HitTestBehavior.opaque,
-        onTap: index < 0 ? null : () => selectTab(index),
-        child: ClipRect(
-          child: Container(
-            margin: const EdgeInsets.all(1),
-            decoration: selected
-                ? BoxDecoration(
-                    color: profile.tabActive,
-                    borderRadius: BorderRadius.circular((tabHeight - 2) / 2),
-                  )
-                : null,
-            alignment: Alignment.center,
-            child: Stack(
-              fit: StackFit.expand,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 24),
-                  child: Center(
-                    child: _tabLabel(slot.session, profile, selected),
-                  ),
-                ),
-                if (slot.hover && canClose)
-                  Positioned(
-                    left: tabCloseLeft - 1,
-                    top: (tabHeight - 2 - tabCloseSide) / 2,
-                    child: _TabCloseButton(
-                      key: ValueKey('tab close $index'),
-                      color: profile.tabText,
-                      onPressed: () => requestCloseTab(index),
-                    ),
-                  ),
-              ],
-            ),
-          ),
+    return ClipRect(
+      child: Padding(
+        padding: const EdgeInsets.only(right: tabGap),
+        child: AmalfiTab(
+          key: index < 0 ? null : ValueKey('tab $index'),
+          label: slot.session.title,
+          selected: selected,
+          width: null,
+          closeLabel: l10n.closeTab,
+          onSelect: index < 0 ? null : () => selectTab(index),
+          onClose: index < 0 || slot.closing
+              ? null
+              : () => requestCloseTab(index),
         ),
       ),
     );
   }
 
-  /// The find bar (32 pt): the field 482 × 22 at x +7 with a focus ring, the previous/next
-  /// pair 45 × 22, the "Done" button 44 × 22, and the match count.
-  Widget _findBar(Profile profile) {
+  /// Esc closes the find bar, Enter and Shift+Enter step through the matches.
+  KeyEventResult _findKey(FocusNode node, KeyEvent event) {
+    if (event is! KeyDownEvent) return KeyEventResult.ignored;
+    if (event.logicalKey == LogicalKeyboardKey.escape) {
+      _endFind();
+      return KeyEventResult.handled;
+    }
+    if (event.logicalKey == LogicalKeyboardKey.enter) {
+      _runFind(step: HardwareKeyboard.instance.isShiftPressed ? -1 : 1);
+      return KeyEventResult.handled;
+    }
+    return KeyEventResult.ignored;
+  }
+
+  /// The find bar (kit `Apps/Terminal/Find Bar`, 32 pt): the search field (small, 480 in a
+  /// 640 window) at x +8, the previous/next segments 56 x 24 and "Done" 56 x 24, the match
+  /// count before the segments, the separator on the last point.
+  Widget _findBar(AmalfiColors colors, Profile profile) {
     final status = _query.text.isEmpty
         ? ''
         : _matches.isEmpty
         ? l10n.findNoMatches
         : l10n.findMatches(_match + 1, _matches.length);
-    Widget button(
-      String key,
-      String label,
-      Widget child,
-      VoidCallback onTap,
-      double width,
-    ) => GestureDetector(
-      key: ValueKey(key),
-      behavior: HitTestBehavior.opaque,
-      onTap: onTap,
-      child: Semantics(
-        label: label,
-        button: true,
-        child: Container(
-          width: width,
-          height: findFieldSize.height,
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            color: profile.tabTrack,
-            borderRadius: BorderRadius.circular(6),
-          ),
-          child: child,
-        ),
-      ),
-    );
-    final glyph = uiText(size: 12, color: profile.title);
-    return Container(
+    return SizedBox(
       key: const ValueKey('find bar'),
       height: findBarHeight,
-      color: profile.chrome,
-      padding: const EdgeInsets.only(left: findFieldLeft, right: 10),
-      child: Row(
+      child: Stack(
         children: [
-          Flexible(
-            child: Container(
-              width: findFieldSize.width,
-              height: findFieldSize.height,
-              padding: const EdgeInsets.symmetric(horizontal: 6),
-              decoration: BoxDecoration(
-                color: profile.grid.background,
-                borderRadius: BorderRadius.circular(6),
-                border: Border.all(color: profile.findRing, width: 2),
-              ),
-              alignment: Alignment.centerLeft,
-              child: Focus(
-                onKeyEvent: (node, event) {
-                  if (event is! KeyDownEvent) return KeyEventResult.ignored;
-                  if (event.logicalKey == LogicalKeyboardKey.escape) {
-                    _endFind();
-                    return KeyEventResult.handled;
-                  }
-                  if (event.logicalKey == LogicalKeyboardKey.enter) {
-                    _runFind(
-                      step: HardwareKeyboard.instance.isShiftPressed ? -1 : 1,
-                    );
-                    return KeyEventResult.handled;
-                  }
-                  return KeyEventResult.ignored;
-                },
-                child: Stack(
-                  alignment: Alignment.centerLeft,
+          LayoutBuilder(
+            builder: (context, box) {
+              // 16 between the field and the segments, 20 before "Done", 4 at the edge.
+              const fixed =
+                  findFieldLeft +
+                  16 +
+                  findSegmentsWidth +
+                  20 +
+                  findDoneWidth +
+                  findRight;
+              final room = box.maxWidth - fixed - (status.isEmpty ? 0 : 96);
+              final field = room.clamp(80.0, findFieldWidth).toDouble();
+              return Padding(
+                padding: const EdgeInsets.only(left: findFieldLeft, top: 4),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    if (_query.text.isEmpty)
-                      IgnorePointer(
-                        child: Text(
-                          l10n.find,
-                          style: uiText(size: 12, color: profile.titleInactive),
-                        ),
-                      ),
-                    EditableText(
+                    AmalfiSearchField(
                       key: const ValueKey('find field'),
                       controller: _query,
                       focusNode: _queryFocus,
-                      style: uiText(size: 12, color: profile.grid.foreground),
-                      cursorColor: profile.grid.foreground,
-                      backgroundCursorColor: profile.grid.foreground,
-                      maxLines: 1,
+                      placeholder: l10n.find,
+                      size: AmalfiFieldSize.small,
+                      width: field,
                       onChanged: (_) => _runFind(),
+                      semanticLabel: l10n.find,
+                    ),
+                    const SizedBox(width: 16),
+                    if (status.isNotEmpty)
+                      SizedBox(
+                        width: 96,
+                        child: Padding(
+                          padding: const EdgeInsets.only(top: 5),
+                          child: Text(
+                            status,
+                            key: const ValueKey('find status'),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: AmalfiType.caption(
+                              color: colors.textSecondary,
+                            ),
+                          ),
+                        ),
+                      ),
+                    SizedBox(
+                      width: findSegmentsWidth,
+                      height: findControlHeight,
+                      child: AmalfiActionSegments(
+                        size: AmalfiControlSize.small,
+                        segments: [
+                          AmalfiSegment.icon(
+                            const AmalfiGlyph(AmalfiGlyphs.chevronLeft),
+                            semanticLabel: l10n.findPrevious,
+                          ),
+                          AmalfiSegment.icon(
+                            const AmalfiGlyph(AmalfiGlyphs.chevronRight),
+                            semanticLabel: l10n.findNext,
+                          ),
+                        ],
+                        onPressed: (i) => _runFind(step: i == 0 ? -1 : 1),
+                      ),
+                    ),
+                    const SizedBox(width: 20),
+                    AmalfiPushButton(
+                      key: const ValueKey('find done'),
+                      label: l10n.findDone,
+                      size: AmalfiControlSize.small,
+                      onPressed: _endFind,
                     ),
                   ],
                 ),
-              ),
-            ),
+              );
+            },
           ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              status,
-              key: const ValueKey('find status'),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: uiText(size: 11, color: profile.titleInactive),
-            ),
-          ),
-          button(
-            'find previous',
-            l10n.findPrevious,
-            Text('‹', style: glyph),
-            () => _runFind(step: -1),
-            22,
-          ),
-          const SizedBox(width: 1),
-          button(
-            'find next',
-            l10n.findNext,
-            Text('›', style: glyph),
-            () => _runFind(step: 1),
-            22,
-          ),
-          const SizedBox(width: 8),
-          button(
-            'find done',
-            l10n.findDone,
-            Text(l10n.findDone, style: uiText(size: 11, color: profile.title)),
-            _endFind,
-            44,
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 0,
+            height: 1,
+            child: ColoredBox(color: colors.lineSeparator),
           ),
         ],
       ),
     );
   }
-}
-
-/// The × at the leading edge of a hovered tab: 18 × 18, 4 pt from the tab edge; a round
-/// highlight while pressed.
-class _TabCloseButton extends StatefulWidget {
-  const _TabCloseButton({
-    super.key,
-    required this.color,
-    required this.onPressed,
-  });
-
-  final Color color;
-  final VoidCallback onPressed;
-
-  @override
-  State<_TabCloseButton> createState() => _TabCloseButtonState();
-}
-
-class _TabCloseButtonState extends State<_TabCloseButton> {
-  bool _pressed = false;
-
-  @override
-  Widget build(BuildContext context) => Semantics(
-    label: l10n.closeTab,
-    button: true,
-    child: GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTapDown: (_) => setState(() => _pressed = true),
-      onTapCancel: () => setState(() => _pressed = false),
-      onTapUp: (_) => setState(() => _pressed = false),
-      onTap: widget.onPressed,
-      child: Container(
-        key: const ValueKey('tab close glyph'),
-        width: tabCloseSide,
-        height: tabCloseSide,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          // provisional: highlight only while pressed
-          color: _pressed ? widget.color.withValues(alpha: 0.2) : null,
-        ),
-        child: CustomPaint(painter: _CrossPainter(widget.color)),
-      ),
-    ),
-  );
-}
-
-class _CrossPainter extends CustomPainter {
-  const _CrossPainter(this.color);
-  final Color color;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = color
-      ..strokeWidth =
-          1.3 // provisional
-      ..strokeCap = StrokeCap.round;
-    final c = size.center(Offset.zero);
-    const arm = 3.0; // provisional
-    canvas.drawLine(
-      c + const Offset(-arm, -arm),
-      c + const Offset(arm, arm),
-      paint,
-    );
-    canvas.drawLine(
-      c + const Offset(-arm, arm),
-      c + const Offset(arm, -arm),
-      paint,
-    );
-  }
-
-  @override
-  bool shouldRepaint(_CrossPainter old) => old.color != color;
-}
-
-/// The proxy icon of the title: a sheet with a folded corner, 11 × 15 in an 18 × 18 cell.
-class _DocumentIconPainter extends CustomPainter {
-  const _DocumentIconPainter(this.color);
-
-  final Color color;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final left = (size.width - 11) / 2;
-    final top = (size.height - 15) / 2;
-    final path = Path()
-      ..moveTo(left, top)
-      ..lineTo(left + 7, top)
-      ..lineTo(left + 11, top + 4)
-      ..lineTo(left + 11, top + 15)
-      ..lineTo(left, top + 15)
-      ..close();
-    canvas.drawPath(
-      path,
-      Paint()
-        ..color = color
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 1,
-    );
-  }
-
-  @override
-  bool shouldRepaint(_DocumentIconPainter old) => old.color != color;
 }

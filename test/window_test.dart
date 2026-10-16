@@ -10,6 +10,10 @@ import 'package:terminal/src/window.dart';
 import 'package:xterm/xterm.dart';
 
 void main() {
+  final lightProfile = Profile.of(
+    const AmalfiThemeData(brightness: Brightness.light, app: 'Terminal'),
+  );
+
   Future<(FakePty, TerminalWindowState)> pump(
     WidgetTester tester, {
     Locale locale = const Locale('en'),
@@ -25,10 +29,13 @@ void main() {
         locale: locale,
         child: Directionality(
           textDirection: TextDirection.ltr,
-          child: TerminalWindow(
-            pty: fake,
-            shellName: 'bash',
-            onLastTabClosed: () => closed = true,
+          child: AmalfiTheme(
+            app: 'Terminal',
+            child: TerminalWindow(
+              pty: fake,
+              shellName: 'bash',
+              onLastTabClosed: () => closed = true,
+            ),
           ),
         ),
       ),
@@ -66,9 +73,9 @@ void main() {
     final (pty, window) = await pump(tester);
     expect(pty.calls.first.$1, 'spawn');
     final (rows, cols) = pty.sizes[1]!;
-    // 800 × 600 minus the chrome (68) and the insets (10 + 27, 7 + 10), in 7 × 14 cells.
-    expect(cols, (800 - 37) ~/ 7);
-    expect(rows, (600 - 68 - 17) ~/ 14);
+    // 800 × 600 minus the chrome (68) and the 12 pt padding, in 7.2 × 16 cells.
+    expect(cols, ((800 - 24) / 7.2).floor());
+    expect(rows, (600 - 68 - 24) ~/ 16);
     final title = tester.widget<Text>(find.byKey(const ValueKey('title')));
     expect(title.data, 'bash — $cols×$rows');
     // Resizing the window resizes the pseudo-terminal.
@@ -95,7 +102,7 @@ void main() {
     expect(entering, lessThan(full / 2));
     await tester.pump(const Duration(milliseconds: 500));
     final settled = tester.getSize(find.byKey(const ValueKey('tab 1'))).width;
-    expect(settled, moreOrLessEquals(full / 2, epsilon: 0.5));
+    expect(settled, moreOrLessEquals((full + 4) / 2 - 4, epsilon: 0.5));
     expect(
       tester.getTopLeft(find.byKey(const ValueKey('tab 1'))).dx,
       greaterThan(tester.getTopLeft(find.byKey(const ValueKey('tab 0'))).dx),
@@ -145,10 +152,11 @@ void main() {
     await tester.enterText(find.byKey(const ValueKey('find field')), 'fish');
     await tester.pump();
     expect(find.text('2 of 2'), findsOneWidget);
-    await tester.tap(find.byKey(const ValueKey('find previous')));
+    final segments = tester.getRect(find.byType(AmalfiActionSegments));
+    await tester.tapAt(segments.centerLeft + const Offset(14, 0));
     await tester.pump();
     expect(find.text('1 of 2'), findsOneWidget);
-    await tester.tap(find.byKey(const ValueKey('find next')));
+    await tester.tapAt(segments.centerRight - const Offset(14, 0));
     await tester.pump();
     expect(find.text('2 of 2'), findsOneWidget);
     await tester.tap(find.byKey(const ValueKey('find done')));
@@ -192,41 +200,38 @@ void main() {
     return mouse;
   }
 
-  testWidgets('the × shows on hover only, 18 × 18 at tab x +4', (tester) async {
-    await pump(tester);
-    expect(find.byKey(const ValueKey('tab close 0')), findsNothing);
-    await hover(tester, 'tab 0');
-    final close = find.byKey(const ValueKey('tab close 0'));
-    expect(close, findsOneWidget);
-    expect(tester.getSize(close), const Size(18, 18));
-    expect(
-      tester.getTopLeft(close).dx -
-          tester.getTopLeft(find.byKey(const ValueKey('tab 0'))).dx,
-      4,
-    );
-  });
-
-  testWidgets('the × has a pressed state and closes the tab and its pty', (
+  testWidgets('the × shows on the selected and the hovered tab, trailing', (
     tester,
   ) async {
+    await pump(tester);
+    await keys(tester, LogicalKeyboardKey.keyT, meta: true);
+    await tester.pumpAndSettle();
+    Finder cross(int i) => find.descendant(
+      of: find.byKey(ValueKey('tab $i')),
+      matching: find.byType(AmalfiGlyph),
+    );
+    // Tab 1 is selected; tab 0 shows it only under the pointer.
+    expect(cross(1), findsOneWidget);
+    expect(cross(0), findsNothing);
+    await hover(tester, 'tab 0');
+    expect(cross(0), findsOneWidget);
+    expect(tester.getSize(cross(0)), const Size(12, 12));
+    final tab = tester.getRect(find.byKey(const ValueKey('tab 0')));
+    // 8 pt of padding inside the trailing edge.
+    expect(tab.right - tester.getRect(cross(0)).right, 8);
+  });
+
+  testWidgets('the × closes the tab and its pty', (tester) async {
     final (pty, window) = await pump(tester);
     await keys(tester, LogicalKeyboardKey.keyT, meta: true);
     await tester.pumpAndSettle();
     final mouse = await hover(tester, 'tab 0');
-    final close = find.byKey(const ValueKey('tab close 0'));
-    BoxDecoration glyph() =>
-        tester
-                .widget<Container>(
-                  find.byKey(const ValueKey('tab close glyph')),
-                )
-                .decoration!
-            as BoxDecoration;
-    expect(glyph().color, isNull);
+    final close = find.descendant(
+      of: find.byKey(const ValueKey('tab 0')),
+      matching: find.byType(AmalfiGlyph),
+    );
     await mouse.moveTo(tester.getCenter(close));
-    await mouse.down(tester.getCenter(close));
-    await tester.pump(kPressTimeout);
-    expect(glyph().color, isNotNull);
-    await mouse.up();
+    await tester.tapAt(tester.getCenter(close));
     await tester.pump();
     await tester.pump();
     expect(window.tabs, hasLength(1));
@@ -247,18 +252,25 @@ void main() {
         locale: const Locale('en'),
         child: Directionality(
           textDirection: TextDirection.ltr,
-          child: TerminalWindow(
-            pty: pty,
-            shellName: 'bash',
-            onLastTabClosed: () => closed = true,
+          child: AmalfiTheme(
+            app: 'Terminal',
+            child: TerminalWindow(
+              pty: pty,
+              shellName: 'bash',
+              onLastTabClosed: () => closed = true,
+            ),
           ),
         ),
       ),
     );
     await tester.pump();
     await tester.pump();
-    await hover(tester, 'tab 0');
-    await tester.tap(find.byKey(const ValueKey('tab close 0')));
+    await tester.tap(
+      find.descendant(
+        of: find.byKey(const ValueKey('tab 0')),
+        matching: find.byType(AmalfiGlyph),
+      ),
+    );
     await tester.pump();
     await tester.pump();
     expect(closed, isTrue);
@@ -290,7 +302,12 @@ void main() {
     await tester.pumpAndSettle();
     pty.busy.addAll([1, 2]);
     await hover(tester, 'tab 0');
-    await tester.tap(find.byKey(const ValueKey('tab close 0')));
+    await tester.tap(
+      find.descendant(
+        of: find.byKey(const ValueKey('tab 0')),
+        matching: find.byType(AmalfiGlyph),
+      ),
+    );
     await tester.pump();
     await tester.pump();
     expect(find.byKey(const ValueKey('close confirmation')), findsOneWidget);
@@ -421,34 +438,78 @@ void main() {
     await tester.pump();
     expect(calls, contains('startMove'));
   });
-  testWidgets('the title is left-aligned with the proxy icon (titlebar.md)', (
+  testWidgets('the title is centred between the window controls', (
     tester,
   ) async {
     await pump(tester);
     expect(tester.getSize(find.byKey(const ValueKey('title band'))).height, 32);
-    final icon = tester.getRect(find.byKey(const ValueKey('title icon')));
-    expect(icon.left, 81);
-    expect(icon.top, 6);
-    expect(icon.size, const Size(18, 18));
     final title = tester.getRect(find.byKey(const ValueKey('title')));
-    expect(title.left, 100);
-    expect(title.right, 800 - 10);
+    expect(title.left, 84);
+    expect(title.right, 800 - 84);
+    expect(title.top, 7);
+    expect(title.height, 18);
   });
 
-  testWidgets('the tab bar track and the new-tab circle (titlebar.md)', (
+  testWidgets('the tab bar and the new-tab circle (kit Tab Bar 1)', (
     tester,
   ) async {
     await pump(tester);
     final bar = tester.getRect(find.byKey(const ValueKey('tab bar')));
     expect(bar.top, 32);
-    expect(bar.height, 28);
+    expect(bar.height, 36);
     final plus = tester.getRect(find.byKey(const ValueKey('new tab')));
-    expect(plus.size, const Size(30, 30));
-    expect(800 - plus.right, 7);
-    expect(plus.center.dy, bar.center.dy);
+    expect(plus.size, const Size(28, 28));
+    expect(800 - plus.right, 8);
+    expect(plus.top - bar.top, 4);
     final tab = tester.getRect(find.byKey(const ValueKey('tab 0')));
-    expect(tab.left, closeTo(10, 0.01));
-    expect(tab.right, closeTo(800 - 42, 0.01));
+    expect(tab.left, closeTo(8, 0.01));
+    expect(tab.right, closeTo(800 - 44, 0.01));
+    expect(tab.top - bar.top, 4);
+    expect(tab.height, 28);
+  });
+
+  testWidgets('the kit window: 640 × 476, parts on the masters', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(640, 476);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(
+      AppLocalizationsScope(
+        child: Directionality(
+          textDirection: TextDirection.ltr,
+          child: AmalfiTheme(
+            app: 'Terminal',
+            child: TerminalWindow(pty: FakePty(), shellName: 'bash'),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.pump();
+    Rect r(String key) => tester.getRect(find.byKey(ValueKey(key)));
+    // `Apps/Terminal/Session`: title bar 0..32, tab bar 32..68, text from y 68 + 12.
+    expect(r('title band'), const Rect.fromLTWH(0, 0, 640, 32));
+    expect(r('tab bar'), const Rect.fromLTWH(0, 32, 640, 36));
+    expect(r('tab 0'), const Rect.fromLTWH(8, 36, 588, 28));
+    expect(r('new tab'), const Rect.fromLTWH(604, 36, 28, 28));
+    final view = tester.widget<TerminalView>(find.byType(TerminalView));
+    expect(view.padding, const EdgeInsets.all(12));
+    expect(tester.getTopLeft(find.byType(TerminalView)), const Offset(0, 68));
+    // Find bar (`Apps/Terminal/Find`): 68..100, field 480 × 24 at x 8, segments 56 × 24 at 504.
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.metaLeft);
+    await tester.sendKeyEvent(LogicalKeyboardKey.keyF);
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.metaLeft);
+    await tester.pump();
+    await tester.pump();
+    expect(r('find bar'), const Rect.fromLTWH(0, 68, 640, 32));
+    expect(r('find field'), const Rect.fromLTWH(8, 72, 480, 24));
+    expect(
+      tester.getRect(find.byType(AmalfiActionSegments)),
+      const Rect.fromLTWH(504, 72, 56, 24),
+    );
+    expect(r('find done').left, 580);
+    expect(r('find done').height, 24);
   });
 
   test('the selected tab keeps 120 pt while the others shrink', () {

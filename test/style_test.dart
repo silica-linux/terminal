@@ -1,20 +1,27 @@
-import 'package:flutter/painting.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:silica_ui/silica_ui.dart';
 import 'package:terminal/src/style.dart';
 
 void main() {
-  test('window sizes from cells (terminal.md › Default size)', () {
-    expect(cellSize, const Size(7, 14));
-    expect(windowWidth(80), 597);
-    expect(windowHeight(24), 421);
-    expect(defaultWindowSize, const Size(597, 421));
-    expect(windowHeight(35), 575);
-    expect(windowWidth(109), 800);
+  final lightProfile = Profile.of(
+    const AmalfiThemeData(brightness: Brightness.light, app: 'Terminal'),
+  );
+  final darkProfile = Profile.of(
+    const AmalfiThemeData(brightness: Brightness.dark, app: 'Terminal'),
+  );
+
+  test('window sizes from cells (kit: padding 12, Mono 12/16)', () {
+    expect(cellSize, const Size(7.2, 16));
+    expect(gridPadding, const EdgeInsets.all(12));
+    expect(windowWidth(80), moreOrLessEquals(600));
+    expect(windowHeight(24), 476);
+    expect(defaultWindowSize, const Size(640, 476));
     // The find bar adds 32 pt, the grid keeps its rows.
-    expect(windowHeight(24, findBar: true), 453);
+    expect(windowHeight(24, findBar: true), 508);
     expect(
       minimumWindowSize,
-      Size(windowWidth(minimumColumns), windowHeight(minimumRows)),
+      Size(minimumWindowWidth, windowHeight(minimumRows)),
     );
   });
 
@@ -23,8 +30,8 @@ void main() {
       text: TextSpan(text: 'M' * 80, style: terminalStyle.toTextStyle()),
       textDirection: TextDirection.ltr,
     )..layout();
-    expect(painter.width, moreOrLessEquals(80 * 7, epsilon: 0.5));
-    expect(painter.height, moreOrLessEquals(14, epsilon: 0.05));
+    expect(painter.width, moreOrLessEquals(80 * 7.2, epsilon: 0.5));
+    expect(painter.height, moreOrLessEquals(16, epsilon: 0.05));
   });
 
   test('the ANSI palette as measured', () {
@@ -39,30 +46,42 @@ void main() {
     expect(theme.brightWhite, ansiBright[7]);
   });
 
-  test('the default profiles: background, selection, cursor', () {
-    expect(lightProfile.grid.background, const Color(0xFFFFFFFF));
-    expect(darkProfile.grid.background, const Color(0xFF1E1E1E));
-    expect(lightProfile.grid.selection, const Color(0xFFB3D7FF));
-    expect(darkProfile.grid.selection, const Color(0xFF3E638B));
-    expect(lightProfile.grid.cursor, const Color(0xFF9D9D9D));
-    expect(darkProfile.grid.cursor, const Color(0xFF9D9D9D));
-    // Grey selection when the window is inactive.
-    for (final profile in [lightProfile, darkProfile]) {
-      expect(profile.theme(active: true).selection, profile.grid.selection);
-      final inactive = profile.theme(active: false).selection;
-      expect(inactive, profile.inactiveSelection);
-      expect(inactive.r, inactive.g);
-      expect(inactive.g, inactive.b);
-    }
-    expect(extraProfiles, hasLength(10));
-  });
+  test(
+    'the profiles come from the App/Terminal palette and the window surface',
+    () {
+      final light = AmalfiColors.of(Brightness.light);
+      final dark = AmalfiColors.of(Brightness.dark);
+      expect(lightProfile.grid.background, light.surfaceWindow);
+      expect(darkProfile.grid.background, dark.surfaceWindow);
+      expect(lightProfile.grid.foreground, light.textPrimary);
+      expect(lightProfile.grid.selection, const Color(0xFFB3D7FF));
+      expect(darkProfile.grid.selection, const Color(0xFF3E638B));
+      expect(lightProfile.grid.cursor, const Color(0xFF9D9D9D));
+      expect(darkProfile.grid.cursor, const Color(0xFF9D9D9D));
+      expect(lightProfile.findMatch, const Color(0xFFC8C8C8));
+      expect(darkProfile.findMatch, const Color(0xFF5A5A5B));
+      expect(
+        lightProfile.theme(active: true).searchHitBackground,
+        lightProfile.findMatch,
+      );
+      // Grey selection when the window is inactive.
+      for (final profile in [lightProfile, darkProfile]) {
+        expect(profile.theme(active: true).selection, profile.grid.selection);
+        final inactive = profile.theme(active: false).selection;
+        expect(inactive, profile.inactiveSelection);
+        expect(inactive.r, inactive.g);
+        expect(inactive.g, inactive.b);
+      }
+      expect(extraProfiles, hasLength(10));
+    },
+  );
 
   test('cursor blink 500/500 ms, tab animation ~550 ms', () {
     expect(cursorBlinkHalf, const Duration(milliseconds: 500));
     expect(tabEnter, const Duration(milliseconds: 550));
-    expect(tabBarHeight, 28);
-    expect(tabHeight, 24);
-    expect(newTabSide, 30);
+    expect(tabBarHeight, 36);
+    expect(tabHeight, 28);
+    expect(newTabSide, 28);
     expect(findBarHeight, 32);
     expect(chromeHeight, 68);
   });
